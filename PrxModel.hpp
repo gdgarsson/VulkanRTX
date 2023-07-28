@@ -7,6 +7,7 @@
 #include "glm/glm.hpp";
 
 // std
+#include <memory>
 #include <vector>
 
 namespace prx {
@@ -16,9 +17,10 @@ namespace prx {
 	public:
 
 		struct Vertex {
-			glm::vec3 position;
-			glm::vec3 color;
-			
+			glm::vec3 position{};
+			glm::vec3 color{};
+			glm::vec3 normal{};
+			glm::vec2 uv{}; // texture coordinates
 
 			static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
 			static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
@@ -27,6 +29,8 @@ namespace prx {
 		struct ModelData {
 			std::vector<Vertex> vertices{};
 			std::vector<uint32_t> indices{};
+
+			void loadModel(const std::string& filepath);
 		};
 
 		PrxModel(PrxDevice& device, const PrxModel::ModelData &data);
@@ -36,6 +40,8 @@ namespace prx {
 		//	Especially for Models, due to them handling device and vertex memory
 		PrxModel(const PrxModel&) = delete;
 		void operator=(const PrxModel&) = delete;
+
+		static std::unique_ptr<PrxModel> createModelFromFile(PrxDevice& device, const std::string& filepath);
 
 		void bind(VkCommandBuffer commandBuffer);
 		void draw(VkCommandBuffer commandBuffer);
