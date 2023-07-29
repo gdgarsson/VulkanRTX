@@ -1,13 +1,28 @@
 #include "PrxModel.hpp"
 
+#include "PrxUtils.hpp"
+
 // lib
 #define TINYOBJECTLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
 
 // std
 #include <cassert>
 #include <cstring>
 #include <iostream>
+
+namespace std {
+	template<>
+	struct hash<prx::PrxModel::Vertex> {
+		size_t operator()(prx::PrxModel::Vertex const& vertex) const {
+			size_t seed = 0;
+			prx::hashCombine(seed, vertex.position, vertex.color, vertex.normal, vertex.uv);
+			return seed;
+		}
+	};
+}
 
 namespace prx {
 
@@ -30,7 +45,6 @@ namespace prx {
 	std::unique_ptr<PrxModel> PrxModel::createModelFromFile(PrxDevice& device, const std::string& filepath) {
 		ModelData builder{};
 		builder.loadModel(filepath);
-		std::cout << "Vertex Count: " << builder.vertices.size() << std::endl;
 		return std::make_unique<PrxModel>(device, builder);
 	}
 	
@@ -173,6 +187,8 @@ namespace prx {
 		vertices.clear();
 		indices.clear();
 
+		std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
 		for (const auto& shape : shapes) {
 			for (const auto& index : shape.mesh.indices) {
 				Vertex vertex{};
@@ -213,7 +229,13 @@ namespace prx {
 					};
 				}
 
-				vertices.push_back(vertex);
+				// if the vertex is new, add to unique vertex map
+				if (uniqueVertices.count(vertex) == 0) {
+					uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+					vertices.push_back(vertex);
+				}
+				indices.push_back(uniqueVertices[vertex]);
+
 			}
 		}
 	}
