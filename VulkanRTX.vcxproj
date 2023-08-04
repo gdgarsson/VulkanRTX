@@ -185,8 +185,9 @@
     <ClCompile Include="Ray.cpp" />
     <ClCompile Include="RTXApp.cpp" />
     <ClCompile Include="RTXRenderer.cpp" />
-    <ClCompile Include="SimpleRenderSystem.cpp" />
     <ClCompile Include="Sphere.cpp" />
+    <ClCompile Include="systems\PointLightSystem.cpp" />
+    <ClCompile Include="systems\SimpleRenderSystem.cpp" />
     <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Vector.cpp" />
@@ -219,8 +220,9 @@
     <ClInclude Include="PrxWindow.hpp" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="RTXApp.h" />
-    <ClInclude Include="SimpleRenderSystem.hpp" />
     <ClInclude Include="Sphere.h" />
+    <ClInclude Include="systems\PointLightSystem.hpp" />
+    <ClInclude Include="systems\SimpleRenderSystem.hpp" />
     <ClInclude Include="Triangle.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Vector.h" />

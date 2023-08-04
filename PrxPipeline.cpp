@@ -73,8 +73,8 @@ namespace prx {
 		shaderStages[1].pNext = nullptr;
 		shaderStages[1].pSpecializationInfo = nullptr;
 
-		auto bindingDescriptions = PrxModel::Vertex::getBindingDescriptions();
-		auto attributeDescriptions = PrxModel::Vertex::getAttributeDescriptions();
+		auto &bindingDescriptions = configInfo.bindingDescriptions;
+		auto &attributeDescriptions = configInfo.attributeDescriptions;
 
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
@@ -204,6 +204,9 @@ namespace prx {
 		configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
 		configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
 		configInfo.dynamicStateInfo.flags = 0;
+
+		configInfo.bindingDescriptions = PrxModel::Vertex::getBindingDescriptions();
+		configInfo.attributeDescriptions = PrxModel::Vertex::getAttributeDescriptions();
 	}
 
 }

@@ -1,11 +1,11 @@
 #pragma once
 
 // prx
-#include "PrxPipeline.hpp"
-#include "PrxGameObject.hpp"
-#include "PrxDevice.hpp"
-#include "PrxCamera.hpp"
-#include "PrxFrameInfo.hpp"
+#include "../PrxPipeline.hpp"
+#include "../PrxGameObject.hpp"
+#include "../PrxDevice.hpp"
+#include "../PrxCamera.hpp"
+#include "../PrxFrameInfo.hpp"
 
 // std
 #include <memory>
