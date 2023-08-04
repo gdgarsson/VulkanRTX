@@ -10,6 +10,8 @@
 #include <vector>
 #include <memory>
 
+// Credit to Brenden Galea for providing code for this file.
+
 namespace prx {
 
 class PrxSwapChain {

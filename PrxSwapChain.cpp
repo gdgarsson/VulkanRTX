@@ -9,6 +9,8 @@
 #include <set>
 #include <stdexcept>
 
+// Credit to Brenden Galea for providing code for this file.
+
 namespace prx {
 
 PrxSwapChain::PrxSwapChain(PrxDevice &deviceRef, VkExtent2D extent)

@@ -167,7 +167,9 @@
     <ClCompile Include="Matrix22f.cpp" />
     <ClCompile Include="Matrix33f.cpp" />
     <ClCompile Include="Matrix44f.cpp" />
+    <ClCompile Include="PrxBuffer.cpp" />
     <ClCompile Include="PrxCamera.cpp" />
+    <ClCompile Include="PrxDescriptors.cpp" />
     <ClCompile Include="PrxGameObject.cpp" />
     <ClCompile Include="PrxModel.cpp" />
     <ClCompile Include="PrxRenderer.cpp" />
@@ -198,7 +200,10 @@
     <ClInclude Include="Matrix22f.h" />
     <ClInclude Include="Matrix33f.h" />
     <ClInclude Include="Matrix44f.h" />
+    <ClInclude Include="PrxBuffer.hpp" />
     <ClInclude Include="PrxCamera.hpp" />
+    <ClInclude Include="PrxDescriptors.hpp" />
+    <ClInclude Include="PrxFrameInfo.hpp" />
     <ClInclude Include="PrxGameObject.hpp" />
     <ClInclude Include="PrxModel.hpp" />
     <ClInclude Include="PrxRenderer.hpp" />

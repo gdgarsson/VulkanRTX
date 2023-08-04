@@ -5,6 +5,7 @@
 #include "PrxWindow.hpp"
 #include "PrxDevice.hpp"
 #include "PrxRenderer.hpp"
+#include "PrxDescriptors.hpp"
 
 // std
 #include <memory>
@@ -33,7 +34,13 @@ namespace prx {
 		PrxDevice prxDevice{ prxWindow };
 		PrxRenderer prxRenderer{ prxWindow, prxDevice };
 
-		std::vector<PrxGameObject> gameObjects; // note; this is likely to change into an overall "models" or "objects" pool
+		// Any descriptors that should be shared by multiple systems can use this pool
+		// Notes: Order of Declaration matters
+		//		  If a given system's lifespan is temporary and using this pool, be sure to 
+		//			free the respective descriptors in the given system's destructor.
+		std::unique_ptr<PrxDescriptorPool> globalPool{}; 
+
+		PrxGameObject::Map gameObjects; // note; this is likely to change into an overall "models" or "objects" pool
 
 
 	};

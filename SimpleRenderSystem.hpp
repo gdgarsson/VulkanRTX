@@ -5,6 +5,7 @@
 #include "PrxGameObject.hpp"
 #include "PrxDevice.hpp"
 #include "PrxCamera.hpp"
+#include "PrxFrameInfo.hpp"
 
 // std
 #include <memory>
@@ -14,8 +15,19 @@ namespace prx {
 
 	class SimpleRenderSystem
 	{
+	public:
+
+		SimpleRenderSystem(PrxDevice &device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout);
+		~SimpleRenderSystem();
+
+		// do not allow for copying
+		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
+		void operator=(const SimpleRenderSystem&) = delete;
+
+		void renderGameObjects(FrameInfo& frameInfo);
+
 	private:
-		void createPipelineLayout();
+		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
 		void createPipeline(VkRenderPass renderPass);
 
 		PrxDevice& prxDevice;
@@ -24,18 +36,6 @@ namespace prx {
 		VkPipelineLayout pipelineLayout;
 
 
-	public:
-
-		SimpleRenderSystem(PrxDevice &device, VkRenderPass renderPass);
-		~SimpleRenderSystem();
-
-		// do not allow for copying
-		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
-		void operator=(const SimpleRenderSystem&) = delete;
-
-		void renderGameObjects(VkCommandBuffer commandBuffer,
-			std::vector<PrxGameObject>& gameObjects,
-			const PrxCamera& camera);
 	};
 }
 

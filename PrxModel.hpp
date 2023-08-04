@@ -1,5 +1,6 @@
 #pragma once
 #include "PrxDevice.hpp"
+#include "PrxBuffer.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS 
@@ -59,12 +60,10 @@ namespace prx {
 
 		PrxDevice& prxDevice;
 
-		VkBuffer vertexBuffer;
-		VkDeviceMemory vertexBufferMemory;
+		std::unique_ptr<PrxBuffer> vertexBuffer;
 		uint32_t vertexCount;
-
-		VkBuffer indexBuffer;
-		VkDeviceMemory indexBufferMemory;
+		
+		std::unique_ptr<PrxBuffer> indexBuffer;
 		uint32_t indexCount;
 
 		bool hasIndexBuffer = false;

@@ -3,6 +3,7 @@
 #include "KeyboardMovementController.hpp"
 #include "SimpleRenderSystem.hpp"
 #include "PrxCamera.hpp"
+#include "PrxBuffer.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS 
@@ -18,8 +19,19 @@
 
 namespace prx {
 
+    struct GlobalUbo {
+        glm::mat4 projectionView{ 1.f };
+        glm::vec4 ambientLightColor{ 1.f,1.f,1.f,.02f }; // w is intensity
+        glm::vec3 lightPosition{ -1.f };
+        alignas(16) glm::vec4 lightColor{ 1.f }; // w is light intensity
+    };
+
 
 	PrxApp::PrxApp() {
+        globalPool = PrxDescriptorPool::Builder(prxDevice)
+            .setMaxSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
+            .build();
 		loadGameObjects();
 	}
 
@@ -30,12 +42,38 @@ namespace prx {
 	// This is the game loop function
 	void PrxApp::run() {
 
+        std::vector<std::unique_ptr<PrxBuffer>> uboBuffers(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
+        for (int i = 0; i < uboBuffers.size(); i++) {
+            uboBuffers[i] = std::make_unique<PrxBuffer>(
+                prxDevice,
+                sizeof(GlobalUbo),
+                1,
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                prxDevice.properties.limits.minUniformBufferOffsetAlignment);
+            uboBuffers[i]->map();
+        }
 
-		SimpleRenderSystem simpleRenderSystem{ prxDevice, prxRenderer.getSwapChainRenderPass()};
+        auto globalSetLayout = PrxDescriptorSetLayout::Builder(prxDevice)
+            .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+            .build();
+
+        std::vector<VkDescriptorSet> globalDescriptorSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
+        for (int i = 0; i < globalDescriptorSets.size(); i++) {
+            auto bufferInfo = uboBuffers[i]->descriptorInfo();
+            PrxDescriptorWriter(*globalSetLayout, *globalPool)
+                .writeBuffer(0, &bufferInfo)
+                .build(globalDescriptorSets[i]);
+        }
+
+		SimpleRenderSystem simpleRenderSystem{ prxDevice, 
+            prxRenderer.getSwapChainRenderPass(), 
+            globalSetLayout->getDescriptorSetLayout()};
         PrxCamera camera{};
         camera.setViewTarget(glm::vec3(-1.f, -2.f, 2.f), glm::vec3(0.f, 0.f, 2.5f));
 
         auto viewerObject = PrxGameObject::createGameObject();
+        viewerObject.transform.translation.z = -2.5f;
         KeyboardMovementController cameraController{};
         glfwGetCursorPos(prxWindow.getGLFWwindow(), &cameraController.mouse.xPos, &cameraController.mouse.yPos);
 
@@ -70,11 +108,26 @@ namespace prx {
 
             float aspect = prxRenderer.getAspectRatio();
 
-            camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10.f);
+            camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 1000.f);
 
 			if (auto commandBuffer = prxRenderer.beginFrame()) {
+                int frameIndex = prxRenderer.getFrameIndex();
+                FrameInfo frameInfo{ frameIndex,
+                    frameTime,
+                    commandBuffer,
+                    camera,
+                    globalDescriptorSets[frameIndex],
+                    gameObjects};
+                
+                // update objects
+                GlobalUbo ubo{};
+                ubo.projectionView = camera.getProjection() * camera.getView();
+                uboBuffers[frameIndex]->writeToBuffer(&ubo);
+                uboBuffers[frameIndex]->flush();
+
+                // render
 				prxRenderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(commandBuffer, gameObjects, camera);
+				simpleRenderSystem.renderGameObjects(frameInfo);
 				prxRenderer.endSwapChainRenderPass(commandBuffer);
 				prxRenderer.endFrame();
 			}
@@ -85,14 +138,32 @@ namespace prx {
 
 	// load models used in the program
 	void PrxApp::loadGameObjects() {
-        std::shared_ptr<PrxModel> prxModel = PrxModel::createModelFromFile(prxDevice, "models/smooth_vase.obj");
+        std::shared_ptr<PrxModel> flatVaseModel = PrxModel::createModelFromFile(prxDevice, "models/flat_vase.obj");
 
-        auto gameObj = PrxGameObject::createGameObject();
-        gameObj.model = prxModel;
-        gameObj.transform.translation = { .0f, .0f, 2.5f }; // move the cube back a bit
-        gameObj.transform.scale = { .5f, .5f, .5f }; // scale by .5x, .5y, .5z
+        auto flatVase = PrxGameObject::createGameObject();
+        flatVase.model = flatVaseModel;
+        flatVase.transform.translation = { .5f, .5f, 0.f };
+        flatVase.transform.scale = { 3.f, 1.5f, 3.f };
 
-		gameObjects.push_back(std::move(gameObj));
+		gameObjects.emplace(flatVase.getId(), std::move(flatVase));
+
+        std::shared_ptr<PrxModel> smoothVaseModel = PrxModel::createModelFromFile(prxDevice, "models/smooth_vase.obj");
+
+        auto smoothVase = PrxGameObject::createGameObject();
+        smoothVase.model = smoothVaseModel;
+        smoothVase.transform.translation = { -.5f, .5f, 0.f };
+        smoothVase.transform.scale = { 3.f, 1.5f, 3.f };
+
+        gameObjects.emplace(smoothVase.getId(), std::move(smoothVase));
+
+        std::shared_ptr<PrxModel> quad = PrxModel::createModelFromFile(prxDevice, "models/quad.obj");
+
+        auto floor = PrxGameObject::createGameObject();
+        floor.model = quad;
+        floor.transform.translation = { 0.f, .5f, 0.f }; // move the floor down a tad
+        floor.transform.scale = { 3.f, 1.f, 3.f }; // scale by 3x, 1y, 3z
+
+        gameObjects.emplace(floor.getId(), std::move(floor));
 	}
 
 
