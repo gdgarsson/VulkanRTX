@@ -48,7 +48,7 @@ namespace prx {
 
         float moveSpeed{3.f};
         float lookSpeed{ 1.5f };
-        float mouseLookSpeed{ 10.f };
+        float mouseLookSpeed{ 5.f };
 
 	};
 }

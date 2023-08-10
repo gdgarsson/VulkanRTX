@@ -6,27 +6,39 @@ layout (location = 2) in vec3 fragNormalWorld;
 
 layout (location = 0) out vec4 outColor;
 
-layout(push_constant) uniform Push {
-	mat4 modelMatrix;
-	mat4 normalMatrix; // mat4 for alignment reasons, truncate into mat3 when used
-} push;
+struct PointLight {
+	vec4 position; // ignore w
+	vec4 color; // w is intensity
+};
 
 layout(set = 0, binding = 0) uniform GlobalUbo {
 	mat4 projection;
 	mat4 view;
 	vec4 ambientLightColor; // w is intensity
-	vec3 lightPosition;
-	vec4 lightColor;
+	PointLight pointLights[10]; // change this to eventually use Vulkan's Specialization Constants instead of hard-coding
+							   // If you change the MAX_LIGHTS in c++, must also change the number here when hard-coded
+	int numLights;
 } ubo;
 
-void main() {
-	
-	vec3 directionToLight = ubo.lightPosition - fragPosWorld;
-	float attenuation = 1.0 / dot(directionToLight, directionToLight); //dot of itself = distance squared
-	
-	vec3 lightColor = ubo.lightColor.xyz * ubo.lightColor.w * attenuation;
-	vec3 ambientLight = ubo.ambientLightColor.xyz * ubo.ambientLightColor.w;
-	vec3 diffuseLight = lightColor * max(dot(normalize(fragNormalWorld), normalize(directionToLight)),0);
+layout(push_constant) uniform Push {
+	mat4 modelMatrix;
+	mat4 normalMatrix; // mat4 for alignment reasons, truncate into mat3 when used
+} push;
 
-	outColor = vec4((diffuseLight + ambientLight) * fragColor, 1.0);
+void main() {
+	vec3 diffuseLight = ubo.ambientLightColor.xyz * ubo.ambientLightColor.w;
+	vec3 surfaceNormal = normalize(fragNormalWorld);
+	
+	for(int i = 0; i < ubo.numLights; i++){
+		PointLight light = ubo.pointLights[i];
+		
+		vec3 directionToLight = light.position.xyz - fragPosWorld;
+		float attenuation = 1.0 / dot(directionToLight, directionToLight); //dot of itself = distance squared
+		float cosAngIncidence = max(dot(surfaceNormal, normalize(directionToLight)),0);
+		vec3 intensity = light.color.xyz * light.color.w * attenuation;
+		
+		diffuseLight += intensity * cosAngIncidence;
+	}
+
+	outColor = vec4(diffuseLight * fragColor, 1.0);
 }

@@ -26,6 +26,10 @@ namespace prx {
 		glm::mat3 normalMatrix();
 	};
 
+	struct PointLightComponent {
+		float lightIntensity = 1.f;
+	};
+
 	class PrxGameObject
 	{
 	public:
@@ -39,19 +43,25 @@ namespace prx {
 			return PrxGameObject{ currentId++ };
 		}
 
+		static PrxGameObject makePointLight(float intensity = 5.f,
+			float radius = 0.1f, glm::vec3 color = glm::vec3(1.f));
+
 		// No copying - avoid dupicate game objects
 		PrxGameObject(const PrxGameObject&) = delete;
-		PrxGameObject &operator=(const PrxGameObject&) = delete;
-		
+		PrxGameObject& operator=(const PrxGameObject&) = delete;
+
 		// make move function and assign operator to use the default
 		PrxGameObject(PrxGameObject&&) = default;
 		PrxGameObject& operator=(PrxGameObject&&) = default;
 
 		id_t getId() { return id; }
 
-		std::shared_ptr<PrxModel> model{};
 		glm::vec3 color{};
 		TransformComponent transform{};
+
+		// Optional pointer components
+		std::shared_ptr<PrxModel> model{};
+		std::unique_ptr<PointLightComponent> pointLight = nullptr;
 
 	private:
 		PrxGameObject(id_t objId) : id{ objId } {}

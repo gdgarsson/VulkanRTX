@@ -98,6 +98,7 @@ namespace prx {
 		pipelineInfo.pDepthStencilState = &configInfo.depthStencilInfo;
 		pipelineInfo.pDynamicState = &configInfo.dynamicStateInfo; // used to configure various pipeline components dynamically
 											  //	i.e. line width, viewport
+
 		pipelineInfo.layout = configInfo.pipelineLayout;
 		pipelineInfo.renderPass = configInfo.renderPass;
 		pipelineInfo.subpass = configInfo.subpass;
@@ -140,6 +141,8 @@ namespace prx {
 		viewportInfo.pViewports = nullptr;
 		viewportInfo.scissorCount = 1;
 		viewportInfo.pScissors = nullptr;
+
+		configInfo.viewportInfo = viewportInfo;
 
 		// configure rasterizer info
 		configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -200,7 +203,7 @@ namespace prx {
 		configInfo.depthStencilInfo.back = {};   // OPTIONAL
 
 		configInfo.dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-		configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 		configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
 		configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
 		configInfo.dynamicStateInfo.flags = 0;
