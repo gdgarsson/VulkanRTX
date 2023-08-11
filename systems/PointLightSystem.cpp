@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <array>
 #include <iostream>
+#include <map>
 
 namespace prx {
 
@@ -65,6 +66,7 @@ namespace prx {
 		PipelineConfigInfo pipelineConfig{};
 
 		PrxPipeline::defaultPipelineConfigInfo(pipelineConfig);
+		PrxPipeline::enableAlphaBlending(pipelineConfig);
 
 		pipelineConfig.attributeDescriptions.clear();
 		pipelineConfig.bindingDescriptions.clear();
@@ -104,6 +106,20 @@ namespace prx {
 	}
 
 	void PointLightSystem::render(FrameInfo& frameInfo) {
+		// sort lights
+		std::map<float, PrxGameObject::id_t> sorted;
+		for (auto& kv : frameInfo.gameObjects) {
+
+			// check for point light
+			auto& obj = kv.second;
+			if (obj.pointLight == nullptr) continue;
+
+			//calculate distance
+			auto offset = frameInfo.camera.getPosition() - obj.transform.translation;
+			float disSquared = glm::dot(offset, offset);
+			sorted[disSquared] = obj.getId();
+		}
+
 		prxPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(frameInfo.commandBuffer,
@@ -113,9 +129,10 @@ namespace prx {
 			&frameInfo.globalDescriptorSet,
 			0, nullptr);
 
-		for (auto& kv : frameInfo.gameObjects) {
-			auto& obj = kv.second;
-			if (obj.pointLight == nullptr) continue;
+		// iterate through sorted map in reverse order
+		for (auto it = sorted.rbegin(); it != sorted.rend(); ++it) {
+			// use game obj id to find light object
+			auto& obj = frameInfo.gameObjects.at(it->second);
 
 			PointLightPushConstants push{};
 			push.position = glm::vec4(obj.transform.translation, 1.f);

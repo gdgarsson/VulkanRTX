@@ -170,7 +170,7 @@ namespace prx {
 		// set up color writing bitmask (should be RGBA, one bit per)
 		configInfo.colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | 
 			VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		configInfo.colorBlendAttachment.blendEnable = VK_FALSE; // disable color blending for now.
+		configInfo.colorBlendAttachment.blendEnable = VK_FALSE; // disable color blending
 																// for stuff like transparency, will need to re-enable
 		configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // OPTIONAL
 		configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // OPTIONAL
@@ -210,6 +210,28 @@ namespace prx {
 
 		configInfo.bindingDescriptions = PrxModel::Vertex::getBindingDescriptions();
 		configInfo.attributeDescriptions = PrxModel::Vertex::getAttributeDescriptions();
+	}
+
+
+	void PrxPipeline::enableAlphaBlending(PipelineConfigInfo& configInfo) {
+		configInfo.colorBlendAttachment.blendEnable = VK_TRUE; // enable color blending
+															   // disable when not in use, can cost performance
+		
+		// set up color writing bitmask (should be RGBA, one bit per)
+		configInfo.colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+			VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;   // Use the alpha as the blend factor
+		configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;  // 1-alpha for contribution from existing colors
+																									// This method relies on rendering furthest to closest
+																									//	and solids before transparents
+		configInfo.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;              
+
+		// for now, not used (since destination alpha is not checked at any point)
+		//	Bonus points: research what instances would be useful for this, and implement them
+		configInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   
+		configInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  
+		configInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;              
 	}
 
 }

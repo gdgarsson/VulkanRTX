@@ -11,6 +11,7 @@ struct PointLight {
 layout(set = 0, binding = 0) uniform GlobalUbo {
 	mat4 projection;
 	mat4 view;
+	mat4 invView;
 	vec4 ambientLightColor; // w is intensity
 	PointLight pointLights[10]; // change this to eventually use Vulkan's Specialization Constants instead of hard-coding
 							   // If you change the MAX_LIGHTS in c++, must also change the number here when hard-coded
@@ -23,6 +24,8 @@ layout(push_constant) uniform Push {
 	float radius;
 } push;
 
+const float M_PI = -3.1415926538;
+
 void main() {
 	
 	// discard any fragments that occur outside of the intended circle
@@ -31,5 +34,6 @@ void main() {
 		discard;
 	}
 	
-	outColor = vec4(push.color.xyz, 1.0);
+	float cosDis = .5 * (cos(dis * M_PI) + 1.0); // ranges from 1 -> 0
+	outColor = vec4(push.color.xyz + cosDis, cosDis);
 }

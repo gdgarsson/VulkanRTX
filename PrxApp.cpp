@@ -122,15 +122,19 @@ namespace prx {
                 GlobalUbo ubo{};
                 ubo.projection = camera.getProjection();
                 ubo.view = camera.getView();
+                ubo.inverseView = camera.getInverseView();
                 pointLightSystem.update(frameInfo, ubo);
                 uboBuffers[frameIndex]->writeToBuffer(&ubo);
                 uboBuffers[frameIndex]->flush();
 
                 // render
 				prxRenderer.beginSwapChainRenderPass(commandBuffer);
+
+                // order matters! Render solids first, then semi-transparents
 				simpleRenderSystem.renderGameObjects(frameInfo);
                 pointLightSystem.render(frameInfo);
-				prxRenderer.endSwapChainRenderPass(commandBuffer);
+				
+                prxRenderer.endSwapChainRenderPass(commandBuffer);
 				prxRenderer.endFrame();
 			}
 		}

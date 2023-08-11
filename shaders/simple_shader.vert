@@ -17,6 +17,7 @@ struct PointLight {
 layout(set = 0, binding = 0) uniform GlobalUbo {
 	mat4 projection;
 	mat4 view;
+	mat4 invView;
 	vec4 ambientLightColor; // w is intensity
 	PointLight pointLights[10]; // change this to eventually use Vulkan's Specialization Constants instead of hard-coding
 							   // If you change the MAX_LIGHTS in c++, must also change the number here when hard-coded
