@@ -1,4 +1,4 @@
-#include "RTXApp.h"
+/*#include "RTXApp.h"
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -15,15 +15,14 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
 void RTXApp::initWindow() {
-	/*::vertices.push_back({{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}});
+	::vertices.push_back({{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}});
 	::vertices.push_back({ {0.5f, -0.5f}, {0.0f, 1.0f, 0.0f} });
 	::vertices.push_back({ {0.5f, 0.5f}, {0.0f, 0.0f, 1.0f} });
-	::vertices.push_back({ {-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f} });*/
+	::vertices.push_back({ {-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f} });
 
 	glfwInit(); // initialize GFLW
 
@@ -1102,7 +1101,7 @@ void RTXApp::drawFrame() {
 
 	// reset the command buffer and record desired commands
 	//   note: RECORDCOMMANDBUFFER() IS WHERE THE DRAW CALL IS
-	vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
+	vkResetCommandBuffer(commandBuffers[currentFrame], VkCommandBufferResetFlagBits 0);
 	recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
 	VkSubmitInfo submitInfo{};
@@ -1708,3 +1707,4 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
 	return VK_FALSE;
 }
+*/

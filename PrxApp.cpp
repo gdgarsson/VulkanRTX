@@ -7,6 +7,8 @@
 #include "systems/SimpleRenderSystem.hpp"
 #include "systems/PointLightSystem.hpp"
 
+#include "PrxTexture.hpp"
+
 // libs
 #define GLM_FORCE_RADIANS 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -25,6 +27,7 @@ namespace prx {
         globalPool = PrxDescriptorPool::Builder(prxDevice)
             .setMaxSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
             .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
+            .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
             .build();
 		loadGameObjects();
 	}
@@ -50,13 +53,22 @@ namespace prx {
 
         auto globalSetLayout = PrxDescriptorSetLayout::Builder(prxDevice)
             .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
+            .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT) // textures should only go to the fragment shader
             .build();
+
+        PrxTexture texture = PrxTexture(prxDevice, "textures/texture.jpg");
+
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.sampler = texture.getSampler();
+        imageInfo.imageView = texture.getImageView();
+        imageInfo.imageLayout = texture.getImageLayout();
 
         std::vector<VkDescriptorSet> globalDescriptorSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
         for (int i = 0; i < globalDescriptorSets.size(); i++) {
             auto bufferInfo = uboBuffers[i]->descriptorInfo();
             PrxDescriptorWriter(*globalSetLayout, *globalPool)
                 .writeBuffer(0, &bufferInfo)
+                .writeImage(1, &imageInfo)
                 .build(globalDescriptorSets[i]);
         }
 

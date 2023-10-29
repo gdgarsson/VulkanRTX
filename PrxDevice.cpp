@@ -108,6 +108,7 @@ void PrxDevice::createInstance() {
   hasGflwRequiredInstanceExtensions();
 }
 
+// used to select the physical GPU which will be used for rendering
 void PrxDevice::pickPhysicalDevice() {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);

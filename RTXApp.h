@@ -1,6 +1,6 @@
 #pragma once
 
-#define VK_USE_PLATFORM_WIN32_KHR
+/*#define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -102,7 +102,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 // vertices array
 // Note: the last vertex is a DUMMY vertex, due to the program (for whatever reason) hating vertices arrays of size 4.
 //      I have been told that somewhere its resizing the vertices array, though I cannot for the life of me locate where.
-/*const std::vector<Vertex> vertices = {
+const std::vector<Vertex> vertices = {
 	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
 	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
 	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
@@ -114,10 +114,10 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 // indices array
 const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0
-};*/
+};
 
 // vertices array
-/*const std::vector<Vertex> vertices = {
+const std::vector<Vertex> vertices = {
 	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
 	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
 	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
@@ -135,7 +135,7 @@ const std::vector<uint16_t> indices = {
 const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0,
 	4, 5, 6, 6, 7, 4
-};*/
+};
 
 
 class RTXApp
@@ -400,3 +400,4 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
 
 static std::vector<char> readFile(const std::string& filename);
 
+*/

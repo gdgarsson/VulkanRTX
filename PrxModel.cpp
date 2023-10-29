@@ -3,7 +3,8 @@
 #include "PrxUtils.hpp"
 
 // lib
-#define TINYOBJECTLOADER_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
+#define TINY
 #include <tiny_obj_loader.h>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -29,11 +30,11 @@ namespace prx {
 	PrxModel::PrxModel(PrxDevice& device, const PrxModel::ModelData& data) : prxDevice{ device } {
 		createVertexBuffers(data.vertices);
 		createIndexBuffer(data.indices);
+		createMaterials(data.mats);
 	}
-	
-	
+
 	PrxModel::~PrxModel() {
-		
+
 	}
 
 	std::unique_ptr<PrxModel> PrxModel::createModelFromFile(PrxDevice& device, const std::string& filepath) {
@@ -41,7 +42,7 @@ namespace prx {
 		builder.loadModel(filepath);
 		return std::make_unique<PrxModel>(device, builder);
 	}
-	
+
 	void PrxModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
 		vertexCount = static_cast<uint32_t>(vertices.size());
 
@@ -66,7 +67,7 @@ namespace prx {
 			vertexCount,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-			);
+		);
 
 		// copy the staging buffer to the vertex buffer
 		prxDevice.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
@@ -76,7 +77,7 @@ namespace prx {
 	void PrxModel::createIndexBuffer(const std::vector<uint32_t>& indices) {
 		indexCount = static_cast<uint32_t>(indices.size());
 		hasIndexBuffer = indexCount > 0;
-		
+
 		if (!hasIndexBuffer) return;
 
 		VkDeviceSize bufferSize = sizeof(indices[0]) * indexCount;
@@ -99,11 +100,35 @@ namespace prx {
 			indexCount,
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-			);
+		);
 
 		// copy the staging buffer to the vertex buffer
 		prxDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 
+	}
+
+	void PrxModel::createMaterials(const std::vector<MtlData>& mats)
+	{
+		for (auto& m : mats) {
+			std::unique_ptr<PrxMaterial> mat = std::make_unique<PrxMaterial>(prxDevice);
+
+			mat.get()->name = m.name;
+
+			mat.get()->diffuse = m.diffuse;
+			mat.get()->specular = m.specular;
+			mat.get()->ambient = m.ambient;
+			mat.get()->emission = m.emission;
+			mat.get()->transmittance = m.transmittance;
+			mat.get()->opacity = m.opacity;
+			mat.get()->shininess = m.shininess;
+			mat.get()->ior = m.ior;
+
+			if (!m.diffuseTexFilePath.empty()) {
+				mat.get()->makeDiffuseTexture(m.diffuseTexFilePath);
+			}
+
+			materials.push_back(mat);
+		}
 	}
 
 	void PrxModel::draw(VkCommandBuffer commandBuffer) {
@@ -113,7 +138,7 @@ namespace prx {
 		else {
 			vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
 		}
-		
+
 	}
 
 	void PrxModel::bind(VkCommandBuffer commandBuffer) {
@@ -124,8 +149,10 @@ namespace prx {
 		if (hasIndexBuffer) {
 			vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		}
+
+		
 	}
-	
+
 	// Note: you could just return a vector containing a single struct with the 3
 	//	fields below as its data, but for readability purposes, that's not done here.
 	std::vector<VkVertexInputBindingDescription> PrxModel::Vertex::getBindingDescriptions() {
@@ -165,29 +192,58 @@ namespace prx {
 
 		std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
+		for (const auto& material : materials) {
+			MtlData m;
+			m.name = material.name;
+			m.diffuse = glm::vec3(material.diffuse[0], material.diffuse[1], material.diffuse[2]);
+			m.specular = glm::vec3(material.specular[0], material.specular[1], material.specular[2]);
+			m.ambient = glm::vec3(material.ambient[0], material.ambient[1], material.ambient[2]);
+			m.emission = glm::vec3(material.emission[0], material.emission[1], material.emission[2]);
+			m.transmittance = glm::vec3(material.transmittance[0], material.transmittance[1], material.transmittance[2]);
+			m.opacity = material.dissolve;
+			m.shininess = material.shininess;
+			m.ior = material.ior;
+
+			if (!material.diffuse_texname.empty()) {
+				m.diffuseTexFilePath = filepath + material.diffuse_texname;
+			}
+
+			mats.push_back(m);
+		}
+
 		for (const auto& shape : shapes) {
+			Vertex vertex{};
+			unsigned int material_id, last_mat_id = 0;
+			if (shape.mesh.material_ids.size() > 0) {
+				material_id = last_mat_id = shape.mesh.material_ids[0];
+			}
+
+			int i = 0;
 			for (const auto& index : shape.mesh.indices) {
-				Vertex vertex{};
+
+				if (i % 3 == 0) {
+					last_mat_id = material_id;
+					material_id = shape.mesh.material_ids[i / 3];
+				}
+
 
 				if (index.vertex_index >= 0) {
-					vertex.position = { 
+					vertex.position = {
 						attrib.vertices[3 * index.vertex_index + 0],
 						attrib.vertices[3 * index.vertex_index + 1],
 						attrib.vertices[3 * index.vertex_index + 2]
 					};
-					
+
 					vertex.color = {
 						attrib.colors[3 * index.vertex_index + 0],
 						attrib.colors[3 * index.vertex_index + 1],
 						attrib.colors[3 * index.vertex_index + 2]
 					};
 
-					
-				
 				}
-
+				
 				if (index.normal_index >= 0) {
-					vertex.normal = { 
+					vertex.normal = {
 						attrib.normals[3 * index.normal_index + 0],
 						attrib.normals[3 * index.normal_index + 1],
 						attrib.normals[3 * index.normal_index + 2]
@@ -195,10 +251,12 @@ namespace prx {
 				}
 
 				if (index.texcoord_index >= 0) {
-					vertex.uv = { 
+					vertex.uv = {
 						attrib.texcoords[2 * index.texcoord_index + 0],
-						attrib.texcoords[2 * index.texcoord_index + 1] 
+						attrib.texcoords[2 * index.texcoord_index + 1]
 					};
+
+					vertex.mat_id = last_mat_id;
 				}
 
 				// if the vertex is new, add to unique vertex map
@@ -208,7 +266,11 @@ namespace prx {
 				}
 				indices.push_back(uniqueVertices[vertex]);
 
+				i++;
 			}
 		}
+
 	}
+
+
 }
