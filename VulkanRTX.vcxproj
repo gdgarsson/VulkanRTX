@@ -88,14 +88,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\GLFW\glfw-3.3.8.bin.WIN64\include;C:\GLM\glm;C:\vcpkg\vcpkg\packages\glm_x86-windows\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\tinyobjloader-release;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\stb-master;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\build\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\include;C:\GLFW\glfw-3.3.8.bin.WIN64\include;C:\GLM\glm;C:\vcpkg\vcpkg\packages\glm_x86-windows\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\tinyobjloader-release;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\stb-master;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\GLFW\glfw-3.3.8.bin.WIN64\lib-vc2022;C:\Users\geoff\Documents\Visual Studio 2022\Libraries;C:\VulkanSDK\1.3.204.1\Lib;C:\GLFW 3.3.7\glfw-3.3.7.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\build\lib\Debug\assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -106,7 +106,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\GLFW\glfw-3.3.8.bin.WIN64\include;C:\GLM\glm;C:\vcpkg\vcpkg\packages\glm_x86-windows\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\tinyobjloader-release;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\stb-master;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\build\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\include;C:\GLFW\glfw-3.3.8.bin.WIN64\include;C:\GLM\glm;C:\vcpkg\vcpkg\packages\glm_x86-windows\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\tinyobjloader-release;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\stb-master;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -115,7 +115,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\GLFW\glfw-3.3.8.bin.WIN64\lib-vc2022;C:\Users\geoff\Documents\Visual Studio 2022\Libraries;C:\VulkanSDK\1.3.204.1\Lib;C:\GLFW 3.3.7\glfw-3.3.7.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -124,14 +124,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\GLFW\glfw-3.3.8.bin.WIN64\include;C:\GLM\glm;C:\vcpkg\vcpkg\packages\glm_x86-windows\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\tinyobjloader-release;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\stb-master;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\build\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\include;C:\GLFW\glfw-3.3.8.bin.WIN64\include;C:\GLM\glm;C:\vcpkg\vcpkg\packages\glm_x86-windows\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\tinyobjloader-release;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\stb-master;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\GLFW\glfw-3.3.8.bin.WIN64\lib-vc2022;C:\Users\geoff\Documents\Visual Studio 2022\Libraries;C:\VulkanSDK\1.3.204.1\Lib;C:\GLFW 3.3.7\glfw-3.3.7.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\build\lib\Debug\assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
     </Link>
@@ -144,7 +144,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\GLFW\glfw-3.3.8.bin.WIN64\include;C:\GLM\glm;C:\vcpkg\vcpkg\packages\glm_x86-windows\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\tinyobjloader-release;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\stb-master;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\build\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\assimp-master\include;C:\GLFW\glfw-3.3.8.bin.WIN64\include;C:\GLM\glm;C:\vcpkg\vcpkg\packages\glm_x86-windows\include;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\tinyobjloader-release;C:\Users\geoff\Documents\Visual Studio 2022\Libraries\stb-master;C:\VulkanSDK\1.3.204.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -153,81 +153,55 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\GLFW\glfw-3.3.8.bin.WIN64\lib-vc2022;C:\Users\geoff\Documents\Visual Studio 2022\Libraries;C:\VulkanSDK\1.3.204.1\Lib;C:\GLFW 3.3.7\glfw-3.3.7.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Box.cpp" />
-    <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="Disk.cpp" />
+    <ClCompile Include="FbxBuilder.cpp" />
     <ClCompile Include="HelloTriangleApplication.cpp" />
     <ClCompile Include="KeyboardMovementController.cpp" />
-    <ClCompile Include="Light.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Matrix22f.cpp" />
-    <ClCompile Include="Matrix33f.cpp" />
-    <ClCompile Include="Matrix44f.cpp" />
     <ClCompile Include="PrxBuffer.cpp" />
     <ClCompile Include="PrxCamera.cpp" />
     <ClCompile Include="PrxDescriptors.cpp" />
     <ClCompile Include="PrxGameObject.cpp" />
+    <ClCompile Include="PrxMaterial.cpp" />
     <ClCompile Include="PrxModel.cpp" />
     <ClCompile Include="PrxRenderer.cpp" />
     <ClCompile Include="PrxSwapChain.cpp" />
     <ClCompile Include="PrxDevice.cpp" />
-    <ClCompile Include="Object.cpp" />
-    <ClCompile Include="Plane.cpp" />
-    <ClCompile Include="PointLight.cpp" />
-    <ClCompile Include="PPMImage.cpp" />
     <ClCompile Include="PrxApp.cpp" />
     <ClCompile Include="PrxPipeline.cpp" />
+    <ClCompile Include="PrxTest.cpp" />
     <ClCompile Include="PrxTexture.cpp" />
     <ClCompile Include="PrxWindow.cpp" />
-    <ClCompile Include="Ray.cpp" />
     <ClCompile Include="RTXApp.cpp" />
-    <ClCompile Include="RTXRenderer.cpp" />
-    <ClCompile Include="Sphere.cpp" />
     <ClCompile Include="systems\PointLightSystem.cpp" />
     <ClCompile Include="systems\SimpleRenderSystem.cpp" />
-    <ClCompile Include="Triangle.cpp" />
-    <ClCompile Include="Utility.cpp" />
-    <ClCompile Include="Vector.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Box.h" />
-    <ClInclude Include="Camera.h" />
-    <ClInclude Include="Disk.h" />
+    <ClInclude Include="FbxBuilder.h" />
     <ClInclude Include="KeyboardMovementController.hpp" />
-    <ClInclude Include="Light.h" />
-    <ClInclude Include="Matrix22f.h" />
-    <ClInclude Include="Matrix33f.h" />
-    <ClInclude Include="Matrix44f.h" />
     <ClInclude Include="PrxBuffer.hpp" />
     <ClInclude Include="PrxCamera.hpp" />
     <ClInclude Include="PrxDescriptors.hpp" />
     <ClInclude Include="PrxFrameInfo.hpp" />
     <ClInclude Include="PrxGameObject.hpp" />
+    <ClInclude Include="PrxMaterial.hpp" />
     <ClInclude Include="PrxModel.hpp" />
     <ClInclude Include="PrxRenderer.hpp" />
     <ClInclude Include="PrxSwapChain.hpp" />
     <ClInclude Include="PrxDevice.hpp" />
-    <ClInclude Include="Object.h" />
-    <ClInclude Include="Plane.h" />
-    <ClInclude Include="PointLight.h" />
-    <ClInclude Include="PPMImage.h" />
     <ClInclude Include="PrxApp.hpp" />
     <ClInclude Include="PrxPipeline.hpp" />
+    <ClInclude Include="PrxTest.h" />
     <ClInclude Include="PrxTexture.hpp" />
+    <ClInclude Include="PrxGlobalVars.hpp" />
     <ClInclude Include="PrxUtils.hpp" />
     <ClInclude Include="PrxWindow.hpp" />
-    <ClInclude Include="Ray.h" />
     <ClInclude Include="RTXApp.h" />
-    <ClInclude Include="Sphere.h" />
     <ClInclude Include="systems\PointLightSystem.hpp" />
     <ClInclude Include="systems\SimpleRenderSystem.hpp" />
-    <ClInclude Include="Triangle.h" />
-    <ClInclude Include="Utility.h" />
-    <ClInclude Include="Vector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

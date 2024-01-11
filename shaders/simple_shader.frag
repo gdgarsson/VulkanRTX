@@ -22,6 +22,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
 	int numLights;
 } ubo;
 
+// consider changing to set 1, binding 0
 layout(set = 0, binding = 1) uniform sampler2D image;
 
 layout(push_constant) uniform Push {

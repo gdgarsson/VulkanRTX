@@ -22,6 +22,8 @@ namespace prx {
 		VkImageView getImageView(){ return imageView; };
 		VkImageLayout getImageLayout(){ return imageLayout; };
 
+		void bindTexture();
+
 	private:
 		void transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout);
 		void generateMipmaps();

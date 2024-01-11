@@ -4,6 +4,8 @@
 #include "PrxWindow.hpp"
 #include "PrxDevice.hpp"
 #include "PrxSwapChain.hpp"
+#include "PrxDescriptors.hpp"
+#include "PrxBuffer.hpp"
 
 // std
 #include <memory>
@@ -18,6 +20,8 @@ namespace prx {
 		void createCommandBuffers();
 		void freeCommandBuffers();
 		void recreateSwapChain();
+		void createGlobalDescriptors();
+		void freeGlobalDescriptors();
 		
 		PrxWindow& prxWindow;
 		PrxDevice& prxDevice;
@@ -34,9 +38,19 @@ namespace prx {
 		PrxRenderer(PrxWindow& window, PrxDevice& device);
 		~PrxRenderer();
 
+		// Any descriptors that should be shared by multiple systems can use this pool
+		// Notes: Order of Declaration matters
+		//		  If a given system's lifespan is temporary and using this pool, be sure to 
+		//			free the respective descriptors in the given system's destructor.
+		static std::unique_ptr<PrxDescriptorPool> globalPool;
+		static std::unique_ptr<PrxDescriptorSetLayout> globalSetLayout;
+		static std::vector<std::unique_ptr<PrxBuffer>> uboBuffers;
+
 		// do not allow for copying
 		PrxRenderer(const PrxRenderer&) = delete;
 		void operator=(const PrxRenderer&) = delete;
+
+		//std::vector<VkDescriptorSet> globalDescriptorSets;
 
 		VkCommandBuffer beginFrame();
 		void endFrame();

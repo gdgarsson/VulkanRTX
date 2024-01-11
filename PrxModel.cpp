@@ -1,5 +1,4 @@
 #include "PrxModel.hpp"
-
 #include "PrxUtils.hpp"
 
 // lib
@@ -9,10 +8,16 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
+
 // std
 #include <cassert>
 #include <cstring>
 #include <iostream>
+
+// macros
+//	Set assimp to split the polygons into triangles, generate smooth normals for lighting,
+//		flip the UVs along the y-axis, and join identical vertices (aka dupe-handling)
+#define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices)
 
 namespace std {
 	template<>
@@ -27,10 +32,27 @@ namespace std {
 
 namespace prx {
 
-	PrxModel::PrxModel(PrxDevice& device, const PrxModel::ModelData& data) : prxDevice{ device } {
+	PrxModel::PrxModel(PrxDevice& device, const PrxModel::OldModelData& data) : prxDevice{ device } {
+		/*texDescriptorPool = PrxDescriptorPool::Builder(prxDevice)
+			.setMaxSets(1) // increase this to 2 or more when making room for materials in the future
+			.addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1) 
+			.build();
+		texMatsDescriptorSets = std::vector<VkDescriptorSet>(1);*/
+		
 		createVertexBuffers(data.vertices);
 		createIndexBuffer(data.indices);
-		createMaterials(data.mats);
+	}
+
+	/*PrxModel::PrxModel(PrxDevice& device, PrxModel::MeshEntryData& data) : prxDevice{device}, modelData{data} {
+		createVertexBuffers(data.vertices);
+		createIndexBuffer(data.indices);
+	}*/
+
+	PrxModel::PrxModel(PrxDevice& device, const PrxModel::ModelData& data) : prxDevice{device} {
+		createVertexBuffers(data.vertices);
+		createIndexBuffer(data.indices);
+		// move the mesh data and texture data with std::move
+
 	}
 
 	PrxModel::~PrxModel() {
@@ -38,9 +60,35 @@ namespace prx {
 	}
 
 	std::unique_ptr<PrxModel> PrxModel::createModelFromFile(PrxDevice& device, const std::string& filepath) {
-		ModelData builder{};
+		OldModelData builder{};
 		builder.loadModel(filepath);
 		return std::make_unique<PrxModel>(device, builder);
+	}
+
+	std::unique_ptr<PrxModel> PrxModel::createModelFromFileAssimp(PrxDevice& device, const std::string& filepath) {
+		ModelData builder{ device };
+		builder.loadModel(filepath);
+		return std::make_unique<PrxModel>(device, builder);
+	}
+
+	void PrxModel::createTexture(const std::string& texFP) {
+		tex = std::make_unique<PrxTexture>(prxDevice, texFP);
+		setupModelTexture();
+	}
+
+	void PrxModel::setupModelTexture() {
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.sampler = tex.get()->getSampler();
+		imageInfo.imageView = tex.get()->getImageView();
+		imageInfo.imageLayout = tex.get()->getImageLayout();
+
+		auto imageSetLayout = PrxDescriptorSetLayout::Builder(prxDevice)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT) // textures should only go to the fragment shader
+			.build();
+
+		PrxDescriptorWriter(*imageSetLayout, *texDescriptorPool)
+			.writeImage(0, &imageInfo)
+			.build(texMatsDescriptorSets[0]);
 	}
 
 	void PrxModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
@@ -107,30 +155,6 @@ namespace prx {
 
 	}
 
-	void PrxModel::createMaterials(const std::vector<MtlData>& mats)
-	{
-		for (auto& m : mats) {
-			std::unique_ptr<PrxMaterial> mat = std::make_unique<PrxMaterial>(prxDevice);
-
-			mat.get()->name = m.name;
-
-			mat.get()->diffuse = m.diffuse;
-			mat.get()->specular = m.specular;
-			mat.get()->ambient = m.ambient;
-			mat.get()->emission = m.emission;
-			mat.get()->transmittance = m.transmittance;
-			mat.get()->opacity = m.opacity;
-			mat.get()->shininess = m.shininess;
-			mat.get()->ior = m.ior;
-
-			if (!m.diffuseTexFilePath.empty()) {
-				mat.get()->makeDiffuseTexture(m.diffuseTexFilePath);
-			}
-
-			materials.push_back(mat);
-		}
-	}
-
 	void PrxModel::draw(VkCommandBuffer commandBuffer) {
 		if (hasIndexBuffer) {
 			vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
@@ -150,8 +174,42 @@ namespace prx {
 			vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		}
 
-		
 	}
+
+	/*void PrxModel::bind(VkCommandBuffer commandBuffer, int baseVertex) {
+		VkBuffer buffers[] = { vertexBuffer->getBuffer() };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffer, baseVertex, 1, buffers, offsets);
+
+		if (hasIndexBuffer) {
+			vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		}
+	}
+	
+	void PrxModel::drawAssimp(VkCommandBuffer commandBuffer) {
+		
+		for (int i = 0; i < meshes.size(); i++) {
+			int materialIndex = meshes[i].matIntex;
+
+			assert(materialIndex < textures.size());
+
+			if (textures[materialIndex]) {
+				textures[materialIndex]->bindTexture();
+			}
+
+			// there has to be a way to draw multiple meshes (one at a time) with only 1
+			//	vertex and index buffer...
+			bind(commandBuffer, meshes[i].baseVertex);
+			
+			if (hasIndexBuffer) {
+				vkCmdDrawIndexed(commandBuffer, meshes[i].numIndices, 1, meshes[i].baseIndex, 0, 0);
+			}
+			else { // failsafe: draw the whole dang thing lol
+				vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
+			}
+		}
+	}*/
+
 
 	// Note: you could just return a vector containing a single struct with the 3
 	//	fields below as its data, but for readability purposes, that's not done here.
@@ -165,7 +223,6 @@ namespace prx {
 		return bindingDescriptions;
 	};
 
-
 	std::vector<VkVertexInputAttributeDescription> PrxModel::Vertex::getAttributeDescriptions() {
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
 
@@ -177,18 +234,19 @@ namespace prx {
 		return attributeDescriptions;
 	};
 
-	void PrxModel::ModelData::loadModel(const std::string& filepath) {
+	bool PrxModel::OldModelData::loadModel(const std::string& filepath) {
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
 		std::vector<tinyobj::material_t> materials;
 		std::string warn, err;
 
+		// clear previous vertices and indices arrays
+		vertices.clear();
+		indices.clear();
+
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
 			throw std::runtime_error(warn + err);
 		}
-
-		vertices.clear();
-		indices.clear();
 
 		std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
@@ -213,18 +271,18 @@ namespace prx {
 
 		for (const auto& shape : shapes) {
 			Vertex vertex{};
-			unsigned int material_id, last_mat_id = 0;
+			/*unsigned int material_id, last_mat_id = 0;
 			if (shape.mesh.material_ids.size() > 0) {
 				material_id = last_mat_id = shape.mesh.material_ids[0];
-			}
+			}*/
 
 			int i = 0;
 			for (const auto& index : shape.mesh.indices) {
 
-				if (i % 3 == 0) {
+				/*if (i % 3 == 0) {
 					last_mat_id = material_id;
 					material_id = shape.mesh.material_ids[i / 3];
-				}
+				}*/
 
 
 				if (index.vertex_index >= 0) {
@@ -256,7 +314,7 @@ namespace prx {
 						attrib.texcoords[2 * index.texcoord_index + 1]
 					};
 
-					vertex.mat_id = last_mat_id;
+					//vertex.mat_id = last_mat_id;
 				}
 
 				// if the vertex is new, add to unique vertex map
@@ -266,11 +324,149 @@ namespace prx {
 				}
 				indices.push_back(uniqueVertices[vertex]);
 
-				i++;
+				//i++;
 			}
 		}
 
+		// if here, load successful
+		return true;
+
 	}
 
+	bool PrxModel::ModelData::loadModel(const std::string& filepath) {
+		Assimp::Importer importer;
+		bool ret;
 
+		const aiScene* pScene = importer.ReadFile(filepath, ASSIMP_LOAD_FLAGS);
+
+		if (pScene) {
+			ret = initFromScene(pScene, filepath);
+		}
+		else {
+			throw std::runtime_error("failed to parse file: " + filepath + ". " + importer.GetErrorString());
+		}
+
+		return ret;
+
+	}
+
+	bool PrxModel::ModelData::initFromScene(const aiScene* pScene, const std::string& filepath) {
+		meshes.resize(pScene->mNumMeshes);
+		textures.resize(pScene->mNumTextures);
+		
+		int numVerts = 0;
+		int numIndices = 0;
+		bool ret;
+
+		countVerticesAndIndices(pScene, numVerts, numIndices);
+
+		reserveSpace(numVerts, numIndices);
+
+		for (int i = 0; i < meshes.size(); i++) {
+			const aiMesh* paiMesh = pScene->mMeshes[i];
+			initSingleMesh(paiMesh);
+		}
+
+		if (!initMaterials(pScene, filepath)) {
+			return false;
+		}
+		
+		return true;
+
+	}
+
+	void PrxModel::ModelData::countVerticesAndIndices(const aiScene* pScene, int& numVertices, int& numIndices) {
+		for (int i = 0; i < meshes.size(); i++) {
+			meshes[i].matIntex = pScene->mMeshes[i]->mMaterialIndex;
+			if (pScene->mMeshes[i]->mPrimitiveTypes == aiPrimitiveType_TRIANGLE) {
+				meshes[i].numIndices = pScene->mMeshes[i]->mNumFaces * 3; // multiplied by 3 because triangle has 3 vertices
+			}
+			else continue; // do not load this mesh if doesn't have triangles; not currently supporting
+			meshes[i].baseVertex = numVertices;
+			meshes[i].baseIndex = numIndices;
+
+			numVertices += pScene->mMeshes[i]->mNumVertices;
+			numIndices += meshes[i].numIndices;
+		}
+	}
+
+	void PrxModel::ModelData::reserveSpace(int numVertices, int numIndices) {
+		vertices.clear();
+		indices.clear();
+
+		vertices.resize(numVertices);
+		indices.resize(numIndices);
+	}
+
+	void PrxModel::ModelData::initSingleMesh(const aiMesh* paiMesh) {
+		const aiVector3D zero3D(0.0f, 0.0f, 0.0f);
+
+		std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+		for (int i = 0; i < paiMesh->mNumVertices; i++) {
+			const aiVector3D& pPos = paiMesh->mVertices[i];
+			const aiVector3D& pNormal = paiMesh->mNormals[i];
+			const aiVector3D& pUV = paiMesh->HasTextureCoords(0) ? paiMesh->mTextureCoords[0][i] : zero3D;
+
+			Vertex v{ glm::vec3(pPos.x, pPos.y, pPos.z),
+				glm::vec3(zero3D.x, zero3D.y, zero3D.z),
+				glm::vec3(pNormal.x, pNormal.y, pNormal.z),
+				glm::vec2(pUV.x, pUV.y) };
+
+			vertices.push_back(v);
+		}
+
+		for (int i = 0; i < paiMesh->mNumFaces; i++) {
+			const aiFace& face = paiMesh->mFaces[i];
+			assert(face.mNumIndices == 3 && "face does not contain exactly 3 indices");
+			indices.push_back(static_cast<uint32_t>(face.mIndices[0]));
+			indices.push_back(static_cast<uint32_t>(face.mIndices[1]));
+			indices.push_back(static_cast<uint32_t>(face.mIndices[2]));
+		}
+	}
+
+	bool PrxModel::ModelData::initMaterials(const aiScene* pScene, const std::string& filepath) {
+		std::string::size_type slash = filepath.find_last_of("/");
+		std::string dir;
+
+		if (slash == std::string::npos) {
+			dir = ".";
+		}
+		else if (slash == 0) {
+			dir = "/";
+		}
+		else {
+			dir = filepath.substr(0, slash);
+		}
+
+		bool ret = true;
+
+		for (int i = 0; i < pScene->mNumMaterials; i++) {
+			const aiMaterial* pMaterial = pScene->mMaterials[i];
+
+			textures[i] = nullptr;
+			
+			if (pMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+				aiString path;
+
+				if (pMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &path,
+					NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
+					std::string p(path.data);
+
+					if (p.substr(0, 2) == ".\\") {
+						p = p.substr(2, p.size() - 2);
+					}
+
+					std::string fullpath = dir + "/" + p;
+
+					// TODO: in the future, have a way to handle failure of loading textures
+					//	without throwing a runtime error
+					textures[i] = new PrxTexture(prxDevice, fullpath);
+				}
+			}
+		}
+
+		return true;
+
+	}
 }

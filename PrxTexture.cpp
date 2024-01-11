@@ -2,6 +2,10 @@
 
 // engine
 #include "PrxBuffer.hpp"
+#include "PrxSwapChain.hpp"
+#include "PrxRenderer.hpp"
+#include "PrxGlobalVars.hpp"
+#include "PrxDescriptors.hpp"
 
 // lib
 #define STB_IMAGE_IMPLEMENTATION
@@ -117,7 +121,6 @@ namespace prx {
 		vkFreeMemory(prxDevice.device(), imageMemory, nullptr);
 		vkDestroyImageView(prxDevice.device(), imageView, nullptr);
 		vkDestroySampler(prxDevice.device(), sampler, nullptr);
-
 	}
 
 	void PrxTexture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -244,6 +247,23 @@ namespace prx {
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
 		prxDevice.endSingleTimeCommands(commandBuffer);
+
+	}
+
+	void PrxTexture::bindTexture() {
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.sampler = getSampler();
+		imageInfo.imageView = getImageView();
+		imageInfo.imageLayout = getImageLayout();
+
+		std::vector<VkDescriptorSet> globalDescriptorSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < globalDescriptorSets.size(); i++) {
+			auto bufferInfo = PrxRenderer::uboBuffers[i]->descriptorInfo();
+			PrxDescriptorWriter(*PrxRenderer::globalSetLayout, *PrxRenderer::globalPool)
+				.writeBuffer(0, &bufferInfo)
+				.writeImage(1, &imageInfo)
+				.build(globalDescriptorSets[i]);
+		}
 
 	}
 }

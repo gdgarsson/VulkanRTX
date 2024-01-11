@@ -1,5 +1,5 @@
 #include "PrxApp.hpp"
-
+#include "PrxGlobalVars.hpp"
 #include "KeyboardMovementController.hpp"
 #include "PrxCamera.hpp"
 #include "PrxBuffer.hpp"
@@ -24,7 +24,7 @@
 namespace prx {
 
 	PrxApp::PrxApp() {
-        globalPool = PrxDescriptorPool::Builder(prxDevice)
+        appGlobalPool = PrxDescriptorPool::Builder(prxDevice)
             .setMaxSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
             .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
             .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
@@ -39,7 +39,7 @@ namespace prx {
 	// This is the game loop function
 	void PrxApp::run() {
 
-        std::vector<std::unique_ptr<PrxBuffer>> uboBuffers(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
+        uboBuffers = std::vector<std::unique_ptr<PrxBuffer>>(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
         for (int i = 0; i < uboBuffers.size(); i++) {
             uboBuffers[i] = std::make_unique<PrxBuffer>(
                 prxDevice,
@@ -66,7 +66,7 @@ namespace prx {
         std::vector<VkDescriptorSet> globalDescriptorSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
         for (int i = 0; i < globalDescriptorSets.size(); i++) {
             auto bufferInfo = uboBuffers[i]->descriptorInfo();
-            PrxDescriptorWriter(*globalSetLayout, *globalPool)
+            PrxDescriptorWriter(*globalSetLayout, *appGlobalPool)
                 .writeBuffer(0, &bufferInfo)
                 .writeImage(1, &imageInfo)
                 .build(globalDescriptorSets[i]);
@@ -156,6 +156,12 @@ namespace prx {
 
 	// load models used in the program
 	void PrxApp::loadGameObjects() {
+        std::shared_ptr<PrxModel> carModel = PrxModel::createModelFromFile(prxDevice, "models/Cadillac/Cadillac_CT4_V_2022.obj");
+        auto car = PrxGameObject::createGameObject();
+        car.model = carModel;
+        car.transform.scale = { 0.5f, 0.5f, 0.5f };
+        gameObjects.emplace(car.getId(), std::move(car));
+
         std::shared_ptr<PrxModel> flatVaseModel = PrxModel::createModelFromFile(prxDevice, "models/flat_vase.obj");
 
         auto flatVase = PrxGameObject::createGameObject();
