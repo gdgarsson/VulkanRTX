@@ -56,7 +56,7 @@ namespace prx {
 	}
 
 	PrxModel::~PrxModel() {
-
+		freeBuffers();
 	}
 
 	std::unique_ptr<PrxModel> PrxModel::createModelFromFile(PrxDevice& device, const std::string& filepath) {
@@ -153,6 +153,11 @@ namespace prx {
 		// copy the staging buffer to the vertex buffer
 		prxDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 
+	}
+
+	void PrxModel::freeBuffers() {
+		indexBuffer.reset();
+		vertexBuffer.reset();
 	}
 
 	void PrxModel::draw(VkCommandBuffer commandBuffer) {

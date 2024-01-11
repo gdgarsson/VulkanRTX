@@ -141,6 +141,8 @@ namespace prx {
 		void createTexture(const std::string& texFP);
 		void setupModelTexture();
 
+		void freeBuffers();
+
 		PrxDevice& prxDevice;
 
 		std::unique_ptr<PrxBuffer> vertexBuffer;

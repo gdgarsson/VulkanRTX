@@ -21,6 +21,7 @@ namespace prx {
 	PrxRenderer::~PrxRenderer() {
 
 		freeCommandBuffers();
+		freeGlobalDescriptors();
 	}
 
 	void PrxRenderer::recreateSwapChain() {
@@ -99,6 +100,12 @@ namespace prx {
 	}
 
 	void PrxRenderer::freeGlobalDescriptors() {
+		for (int i = 0; i < uboBuffers.size(); i++) {
+			uboBuffers[i].reset();
+		}
+		
+		globalSetLayout.reset();
+		globalPool.reset();
 		
 	}
 

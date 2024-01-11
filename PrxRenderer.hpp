@@ -21,7 +21,9 @@ namespace prx {
 		void freeCommandBuffers();
 		void recreateSwapChain();
 		void createGlobalDescriptors();
+		void freeUBOs();
 		void freeGlobalDescriptors();
+
 		
 		PrxWindow& prxWindow;
 		PrxDevice& prxDevice;

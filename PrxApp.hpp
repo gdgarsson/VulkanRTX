@@ -32,6 +32,7 @@ namespace prx {
 
 	private:
 		void loadGameObjects();
+		void unloadGameObjects();
 
 		PrxWindow prxWindow{ WIDTH, HEIGHT, "Hello, Vulkan!" };
 		PrxDevice prxDevice{ prxWindow };

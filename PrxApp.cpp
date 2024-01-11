@@ -152,6 +152,10 @@ namespace prx {
 		}
 
 		vkDeviceWaitIdle(prxDevice.device());
+        
+        for (int i = 0; i < uboBuffers.size(); i++) {
+            uboBuffers[i].reset();
+        }
 	}
 
 	// load models used in the program
@@ -209,5 +213,12 @@ namespace prx {
         }
 	}
 
+    // don't use this yet, its untested and not done
+    void PrxApp::unloadGameObjects() {
+        std::unordered_map<unsigned int, PrxGameObject>::iterator it;
 
+        for (auto const& obj : gameObjects) {
+            obj.second.~PrxGameObject();
+        }
+    }
 }
