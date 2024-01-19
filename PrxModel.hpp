@@ -117,23 +117,22 @@ namespace prx {
 		PrxModel(const PrxModel&) = delete;
 		void operator=(const PrxModel&) = delete;
 
+		static std::unique_ptr<PrxModel> createModelFromFileOld(PrxDevice& device, const std::string& filepath);
 		static std::unique_ptr<PrxModel> createModelFromFile(PrxDevice& device, const std::string& filepath);
-		static std::unique_ptr<PrxModel> createModelFromFileAssimp(PrxDevice& device, const std::string& filepath);
 		
-		void bind(VkCommandBuffer commandBuffer);
+		void bind(VkCommandBuffer commandBuffer, int baseVertex = 0);
 		void draw(VkCommandBuffer commandBuffer);
 		
-		void bind(VkCommandBuffer commandBuffer, int baseVertex);
 		void drawAssimp(VkCommandBuffer commandBuffer);
 
 		std::unique_ptr<PrxDescriptorPool> texDescriptorPool;
 		std::vector<VkDescriptorSet> texMatsDescriptorSets;
 
+		bool usesAssimp = false;
+
 	private:
 
 		PrxModel(PrxDevice& device);
-
-		//MeshEntryData& modelData;
 
 		void createVertexBuffers(const std::vector<Vertex>& vertices);
 		void createIndexBuffer(const std::vector<uint32_t>& indices);

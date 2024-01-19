@@ -8,20 +8,15 @@
 
 namespace prx {
 
-	std::unique_ptr<PrxDescriptorPool> PrxRenderer::globalPool;
-	std::vector<std::unique_ptr<PrxBuffer>> PrxRenderer::uboBuffers;
-	std::unique_ptr<PrxDescriptorSetLayout> PrxRenderer::globalSetLayout;
-
+	
 	PrxRenderer::PrxRenderer(PrxWindow& window, PrxDevice& device) : prxWindow{ window }, prxDevice{ device } {
-		createGlobalDescriptors();
 		recreateSwapChain();
 		createCommandBuffers();
 	}
 
 	PrxRenderer::~PrxRenderer() {
-
 		freeCommandBuffers();
-		freeGlobalDescriptors();
+		
 	}
 
 	void PrxRenderer::recreateSwapChain() {
@@ -57,33 +52,6 @@ namespace prx {
 		// COME BACK TO THIS
 	}
 
-	void PrxRenderer::createGlobalDescriptors() {
-		//globalDescriptorSets = std::vector<VkDescriptorSet>(PrxSwapChain::MAX_FRAMES_IN_FLIGHT * 2);
-		globalPool = PrxDescriptorPool::Builder(prxDevice)
-			.setMaxSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
-			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
-			.addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, PrxSwapChain::MAX_FRAMES_IN_FLIGHT)
-			.build();
-
-		globalSetLayout = PrxDescriptorSetLayout::Builder(prxDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
-			.addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT) // textures should only go to the fragment shader
-			.build();
-
-		// setup ubo buffers
-		uboBuffers = std::vector<std::unique_ptr<PrxBuffer>>(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
-		for (int i = 0; i < uboBuffers.size(); i++) {
-			uboBuffers[i] = std::make_unique<PrxBuffer>(
-				prxDevice,
-				sizeof(GlobalUbo),
-				1,
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-				prxDevice.properties.limits.minUniformBufferOffsetAlignment);
-			uboBuffers[i]->map();
-		}
-	}
-
 	void PrxRenderer::createCommandBuffers() {
 
 		commandBuffers.resize(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -97,16 +65,6 @@ namespace prx {
 		if (vkAllocateCommandBuffers(prxDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate command buffers!");
 		}
-	}
-
-	void PrxRenderer::freeGlobalDescriptors() {
-		for (int i = 0; i < uboBuffers.size(); i++) {
-			uboBuffers[i].reset();
-		}
-		
-		globalSetLayout.reset();
-		globalPool.reset();
-		
 	}
 
 	void PrxRenderer::freeCommandBuffers() {

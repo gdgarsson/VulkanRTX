@@ -82,9 +82,27 @@ namespace prx {
 		for (auto& kv : frameInfo.gameObjects) {
 			auto& obj = kv.second;
 			if (obj.model == nullptr) continue;
+
+			// The way things are currently set up is ineffecient
+			// In the future, do it this way: https://www.reddit.com/r/vulkan/comments/10tfz49/creating_descriptor_sets_for_texture_and_uniform/
+			// "Instead of binding a new texture to the descriptor every time you draw the object, 
+			//	bind all the textures as an array to 1 binding. Then you can pass through an index 
+			//  through push constants corresponding to the texture in the array."
+			// The link also has another link to getting started with arrays of textures
+
+			// also, fix the render system tomorrow
+			auto bufferInfo = obj.getBufferInfo(frameInfo.frameIndex);
+			auto imageInfo = obj.diffuseMap->getImageInfo();
+			VkDescriptorSet gameObjectDescriptorSet;
+			PrxDescriptorWriter(*renderSystemLayout, frameInfo.frameDescriptorPool)
+				.writeBuffer(0, &bufferInfo)
+				.writeImage(1, &imageInfo)
+				.build(gameObjectDescriptorSet);
+
 			SimplePushConstantData push{};
 			push.modelMatrix = obj.transform.mat4();
 			push.normalMatrix = obj.transform.normalMatrix(); // Note: GLM auto-converts Mat3 to a Mat4, so there's no need to make a function for extra padding when one already exists
+
 
 			vkCmdPushConstants(frameInfo.commandBuffer,
 				pipelineLayout,
@@ -93,6 +111,7 @@ namespace prx {
 
 			obj.model->bind(frameInfo.commandBuffer);
 			obj.model->draw(frameInfo.commandBuffer);
+			
 		}
 	}
 

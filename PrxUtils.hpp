@@ -2,6 +2,7 @@
 
 #include <functional>
 
+// from: https://stackoverflow.com/a/57595105
 namespace prx {
 	template <typename T, typename... Rest>
 	void hashCombine(std::size_t& seed, const T& v, const Rest&... rest) {

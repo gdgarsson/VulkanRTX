@@ -28,7 +28,7 @@ namespace prx {
 
 		void run();
 
-		std::vector<std::unique_ptr<PrxBuffer>>& getUboBuffers() { return uboBuffers; }
+		//std::vector<std::unique_ptr<PrxBuffer>>& getUboBuffers() { return uboBuffers; }
 
 	private:
 		void loadGameObjects();
@@ -42,12 +42,10 @@ namespace prx {
 		// Notes: Order of Declaration matters
 		//		  If a given system's lifespan is temporary and using this pool, be sure to 
 		//			free the respective descriptors in the given system's destructor.
-		std::unique_ptr<PrxDescriptorPool> appGlobalPool{};
-
+		std::unique_ptr<PrxDescriptorPool> globalPool;
 		std::vector<std::unique_ptr<PrxBuffer>> uboBuffers;
-
-		PrxGameObject::Map gameObjects; // note; this is likely to change into an overall "models" or "objects" pool
-
+		std::vector<std::unique_ptr<PrxDescriptorPool>> framePools;
+		PrxGameObjectManager gameObjectManager{ prxDevice };
 
 	};
 }

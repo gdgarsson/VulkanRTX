@@ -1,4 +1,5 @@
 #include "PrxModel.hpp"
+#include "PrxRenderer.hpp" // used to access the default texture
 #include "PrxUtils.hpp"
 
 // lib
@@ -8,11 +9,12 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-
 // std
 #include <cassert>
 #include <cstring>
 #include <iostream>
+
+//start here tomorrow to get textures properly loaded in through here!
 
 // macros
 //	Set assimp to split the polygons into triangles, generate smooth normals for lighting,
@@ -59,13 +61,13 @@ namespace prx {
 		freeBuffers();
 	}
 
-	std::unique_ptr<PrxModel> PrxModel::createModelFromFile(PrxDevice& device, const std::string& filepath) {
+	std::unique_ptr<PrxModel> PrxModel::createModelFromFileOld(PrxDevice& device, const std::string& filepath) {
 		OldModelData builder{};
 		builder.loadModel(filepath);
 		return std::make_unique<PrxModel>(device, builder);
 	}
 
-	std::unique_ptr<PrxModel> PrxModel::createModelFromFileAssimp(PrxDevice& device, const std::string& filepath) {
+	std::unique_ptr<PrxModel> PrxModel::createModelFromFile(PrxDevice& device, const std::string& filepath) {
 		ModelData builder{ device };
 		builder.loadModel(filepath);
 		return std::make_unique<PrxModel>(device, builder);
@@ -170,18 +172,7 @@ namespace prx {
 
 	}
 
-	void PrxModel::bind(VkCommandBuffer commandBuffer) {
-		VkBuffer buffers[] = { vertexBuffer->getBuffer() };
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
-
-		if (hasIndexBuffer) {
-			vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-		}
-
-	}
-
-	/*void PrxModel::bind(VkCommandBuffer commandBuffer, int baseVertex) {
+	void PrxModel::bind(VkCommandBuffer commandBuffer, int baseVertex) {
 		VkBuffer buffers[] = { vertexBuffer->getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, baseVertex, 1, buffers, offsets);
@@ -189,19 +180,25 @@ namespace prx {
 		if (hasIndexBuffer) {
 			vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		}
+
 	}
-	
-	void PrxModel::drawAssimp(VkCommandBuffer commandBuffer) {
+
+	/*void PrxModel::drawAssimp(VkCommandBuffer commandBuffer) {
 		
 		for (int i = 0; i < meshes.size(); i++) {
 			int materialIndex = meshes[i].matIntex;
 
 			assert(materialIndex < textures.size());
 
-			if (textures[materialIndex]) {
-				textures[materialIndex]->bindTexture();
+			if (textures.size() > 0) {
+				if (textures[materialIndex]) {
+					textures[materialIndex]->bindTexture();
+				}
 			}
-
+			else {
+				PrxRenderer::defaultTexture->bindTexture();
+			}
+			
 			// there has to be a way to draw multiple meshes (one at a time) with only 1
 			//	vertex and index buffer...
 			bind(commandBuffer, meshes[i].baseVertex);
@@ -418,15 +415,16 @@ namespace prx {
 				glm::vec3(pNormal.x, pNormal.y, pNormal.z),
 				glm::vec2(pUV.x, pUV.y) };
 
-			vertices.push_back(v);
+			vertices[i] = v;
 		}
 
 		for (int i = 0; i < paiMesh->mNumFaces; i++) {
 			const aiFace& face = paiMesh->mFaces[i];
 			assert(face.mNumIndices == 3 && "face does not contain exactly 3 indices");
-			indices.push_back(static_cast<uint32_t>(face.mIndices[0]));
-			indices.push_back(static_cast<uint32_t>(face.mIndices[1]));
-			indices.push_back(static_cast<uint32_t>(face.mIndices[2]));
+			size_t indexArrSlot = i * 3;
+			indices[indexArrSlot] = static_cast<uint32_t>(face.mIndices[0]);
+			indices[indexArrSlot + 1] = static_cast<uint32_t>(face.mIndices[1]);
+			indices[indexArrSlot + 2] = static_cast<uint32_t>(face.mIndices[2]);
 		}
 	}
 
@@ -449,7 +447,7 @@ namespace prx {
 		for (int i = 0; i < pScene->mNumMaterials; i++) {
 			const aiMaterial* pMaterial = pScene->mMaterials[i];
 
-			textures[i] = nullptr;
+			if(textures.size() > 0) textures[i] = nullptr;
 			
 			if (pMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 				aiString path;

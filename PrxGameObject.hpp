@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PrxModel.hpp"
+#include "PrxTexture.hpp"
 
 //lib
 #include <glm/gtc/matrix_transform.hpp>
@@ -30,6 +31,13 @@ namespace prx {
 		float lightIntensity = 1.f;
 	};
 
+	struct GameObjectBufferData {
+		glm::mat4 modelMatrix{1.f};
+		glm::mat4 normalMatrix{1.f};
+	};
+
+	class PrxGameObjectManager; // forward declaration for proper compatibility with PrxGameObject
+
 	class PrxGameObject
 	{
 	public:
@@ -38,35 +46,73 @@ namespace prx {
 		using id_t = unsigned int;
 		using Map = std::unordered_map<id_t, PrxGameObject>;
 
-		static PrxGameObject createGameObject() {
-			static id_t currentId = 0;
-			return PrxGameObject{ currentId++ };
-		}
-
-		static PrxGameObject makePointLight(float intensity = 5.f,
-			float radius = 0.1f, glm::vec3 color = glm::vec3(1.f));
-
 		// No copying - avoid dupicate game objects
 		PrxGameObject(const PrxGameObject&) = delete;
 		PrxGameObject& operator=(const PrxGameObject&) = delete;
+		PrxGameObject& operator=(PrxGameObject&&) = delete;
 
 		// make move function and assign operator to use the default
 		PrxGameObject(PrxGameObject&&) = default;
-		PrxGameObject& operator=(PrxGameObject&&) = default;
 
 		id_t getId() { return id; }
+
+		VkDescriptorBufferInfo getBufferInfo(int frameIndex);
 
 		glm::vec3 color{};
 		TransformComponent transform{};
 
 		// Optional pointer components
 		std::shared_ptr<PrxModel> model{};
+		std::shared_ptr<PrxTexture> diffuseMap = nullptr;
 		std::unique_ptr<PointLightComponent> pointLight = nullptr;
 
 	private:
-		PrxGameObject(id_t objId) : id{ objId } {}
+		PrxGameObject(id_t objId, const PrxGameObjectManager& manager) : id{ objId }, gameObjectManager{ manager } {}
 
 		id_t id;
+		const PrxGameObjectManager& gameObjectManager;
+
+		friend class PrxGameObjectManager;
+	};
+
+	class PrxGameObjectManager {
+	public:
+		static constexpr int MAX_GAME_OBJECTS = 1000;
+
+		PrxGameObjectManager(PrxDevice& device);
+		
+		// ensure there is only 1 game object manager!
+		PrxGameObjectManager(const PrxGameObjectManager&) = delete;
+		PrxGameObjectManager &operator=(const PrxGameObjectManager&) = delete;
+		PrxGameObjectManager(PrxGameObjectManager&&) = delete;
+		PrxGameObjectManager &operator=(PrxGameObjectManager&&) = delete;
+
+		PrxGameObject &createGameObject() {
+			assert(currentID < MAX_GAME_OBJECTS && "Max game object count exceeded");
+			auto gameObj = PrxGameObject{ currentID++, *this };
+			auto gameObjId = gameObj.getId();
+			gameObj.diffuseMap = textureDefault;
+			gameObjects.emplace(gameObjId, std::move(gameObj));
+			return gameObjects.at(gameObjId);
+		}
+		
+		PrxGameObject& makePointLight(
+			float intensity = 10.f, float radius = 1.0f, glm::vec3 color = glm::vec3{ 1.f });
+
+		VkDescriptorBufferInfo getBufferInfoForGameObject(int frameIndex, PrxGameObject::id_t gameObjId) const {
+			return uboBuffers[frameIndex]->descriptorInfoForIndex(gameObjId);
+		};
+
+		void updateBuffer(int frameIndex);
+
+		
+		PrxGameObject::Map gameObjects{};
+		std::vector<std::unique_ptr<PrxBuffer>> uboBuffers{PrxSwapChain::MAX_FRAMES_IN_FLIGHT};
+
+	private:
+		PrxGameObject::id_t currentID = 0;
+		std::shared_ptr<PrxTexture> textureDefault;
+
 	};
 }
 

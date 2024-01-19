@@ -6,11 +6,13 @@
 #include "PrxSwapChain.hpp"
 #include "PrxDescriptors.hpp"
 #include "PrxBuffer.hpp"
+#include "PrxTexture.hpp"
 
 // std
 #include <memory>
 #include <vector>
 #include <cassert>
+#include <unordered_map>
 
 namespace prx {
 
@@ -20,9 +22,6 @@ namespace prx {
 		void createCommandBuffers();
 		void freeCommandBuffers();
 		void recreateSwapChain();
-		void createGlobalDescriptors();
-		void freeUBOs();
-		void freeGlobalDescriptors();
 
 		
 		PrxWindow& prxWindow;
@@ -44,10 +43,7 @@ namespace prx {
 		// Notes: Order of Declaration matters
 		//		  If a given system's lifespan is temporary and using this pool, be sure to 
 		//			free the respective descriptors in the given system's destructor.
-		static std::unique_ptr<PrxDescriptorPool> globalPool;
-		static std::unique_ptr<PrxDescriptorSetLayout> globalSetLayout;
-		static std::vector<std::unique_ptr<PrxBuffer>> uboBuffers;
-
+		
 		// do not allow for copying
 		PrxRenderer(const PrxRenderer&) = delete;
 		void operator=(const PrxRenderer&) = delete;

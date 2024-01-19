@@ -1,5 +1,8 @@
 #include "PrxGameObject.hpp"
 
+// std
+#include <numeric>
+
 namespace prx {
 	glm::mat4 TransformComponent::mat4() {
 		const float c3 = glm::cos(rotation.z);
@@ -61,16 +64,55 @@ namespace prx {
 
 	}
 
-	PrxGameObject PrxGameObject::makePointLight(float intensity,
+
+	PrxGameObject& PrxGameObjectManager::makePointLight(float intensity,
 		float radius, glm::vec3 color) {
-		PrxGameObject gameObj = PrxGameObject::createGameObject();
+		auto& gameObj = createGameObject();
 		gameObj.color = color;
 		gameObj.transform.scale.x = radius;
-		
-		
 		gameObj.pointLight = std::make_unique<PointLightComponent>();
 		gameObj.pointLight->lightIntensity = intensity;
 
 		return gameObj;
 	}
+
+	PrxGameObjectManager::PrxGameObjectManager(PrxDevice& device) {
+		
+		// setup memory alignment
+		// including nonCoherentAtomSize enables flushing a specific index at once
+		int alignment = std::lcm(
+			device.properties.limits.nonCoherentAtomSize,
+			device.properties.limits.minUniformBufferOffsetAlignment
+		);
+
+		// setup UBOs
+		// Note: find where the hell you put the UBOs and change it to here
+		for (int i = 0; i < uboBuffers.size(); i++) {
+			uboBuffers[i] = std::make_unique<PrxBuffer>(
+				device,
+				sizeof(GameObjectBufferData),
+				PrxGameObjectManager::MAX_GAME_OBJECTS,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, // setup for usage as a uniform buffer
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 
+				alignment);
+			uboBuffers[i]->map(); // map the UBO to memory
+		}
+	}
+
+	void PrxGameObjectManager::updateBuffer(int frameIndex) {
+		// copy model and normal matrices for each game object into the buffer for this frame
+		for (auto& kv : gameObjects) {
+			auto& obj = kv.second;
+			GameObjectBufferData data{};
+			data.modelMatrix = obj.transform.mat4();
+			data.normalMatrix = obj.transform.normalMatrix();
+			uboBuffers[frameIndex]->writeToIndex(&data, kv.first);
+		}
+		uboBuffers[frameIndex]->flush();
+	}
+
+	VkDescriptorBufferInfo PrxGameObject::getBufferInfo(int frameIndex) {
+		return gameObjectManager.getBufferInfoForGameObject(frameIndex, id);
+	}
+
 }

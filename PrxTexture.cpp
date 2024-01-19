@@ -16,162 +16,276 @@
 #include <cmath>
 
 namespace prx {
+	unsigned int PrxTexture::next_id = 0;
+
 	PrxTexture::PrxTexture(PrxDevice& device, const std::string& filepath) : prxDevice(device) {
-		int texChannels, bytesPerPixel;
-		stbi_uc* data = stbi_load(filepath.c_str(), 
-			&width, 
-			&height, 
-			&bytesPerPixel, 
-			4); // store the pixel data
-		VkDeviceSize imageSize = width * height; // set image size to width * height
+		createTextureImage(filepath);
+		createTextureImageView(VK_IMAGE_VIEW_TYPE_2D); // only supports 2D images for now
+													   //	in the future, update to support more image types!
+		createTextureSampler();
+		assignID();
+		updateDescriptor();
+	}
 
-		mipLevels = std::floor(std::log2(std::max(width, height))) + 1;
+	PrxTexture::PrxTexture(PrxDevice& device, VkFormat format, VkExtent3D extent,
+		VkImageUsageFlags usage, VkSampleCountFlagBits sampleCount) : prxDevice(device) {
 
-		PrxBuffer stagingBuffer{
-			prxDevice,
-			4,
-			static_cast<uint32_t>(imageSize),
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-		};
+		VkImageAspectFlags aspectMask = 0;
+		VkImageLayout imageLayout;
 
-		// map memory and write to buffer
+		texFormat = format;
+		texExtent = extent;
+
+		if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+			aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
+		if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+			aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		}
+
+		VkImageCreateInfo imageCreateInfo{};
+		imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageCreateInfo.format = format;
+		imageCreateInfo.extent = extent;
+		imageCreateInfo.mipLevels = 1; // not really doing many mip layers rn
+		imageCreateInfo.arrayLayers = 1; // consider changing to TEXTURE_ARRAY_SIZE when you're able to do texture arrays
+		imageCreateInfo.samples = sampleCount;
+		imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageCreateInfo.usage = usage;
+		imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		device.createImageWithInfo(imageCreateInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			texImage, texImageMemory);
+
+		VkImageViewCreateInfo viewCreateInfo{};
+		viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewCreateInfo.format = format;
+		viewCreateInfo.subresourceRange = {};
+		viewCreateInfo.subresourceRange.aspectMask = aspectMask;
+		viewCreateInfo.subresourceRange.baseMipLevel = 0;
+		viewCreateInfo.subresourceRange.levelCount = 1;
+		viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+		viewCreateInfo.subresourceRange.layerCount = 1;
+		viewCreateInfo.image = texImage;
+
+		if (vkCreateImageView(device.device(), &viewCreateInfo, nullptr, &texImageView) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create texture image view!");
+		}
+
+		// seperate out the sampler in the future
+		if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+			// create sampler to sample from the attachment in the  fragment shader
+			VkSamplerCreateInfo samplerCreateInfo{};
+			samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+			samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+			samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+			samplerCreateInfo.addressModeV = samplerCreateInfo.addressModeU;
+			samplerCreateInfo.addressModeW = samplerCreateInfo.addressModeU;
+			samplerCreateInfo.mipLodBias = 0.0f;
+			samplerCreateInfo.maxAnisotropy = 1.0f;
+			samplerCreateInfo.minLod = 0;
+			samplerCreateInfo.maxLod = 1;
+			samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+
+			if (vkCreateSampler(device.device(), &samplerCreateInfo, nullptr, &texSampler) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create sampler!");
+			}
+		}
+
+		VkImageLayout samplerImageLayout = imageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+		texImageDescriptor.sampler = texSampler;
+		texImageDescriptor.imageView = texImageView;
+		texImageDescriptor.imageLayout = samplerImageLayout;
+
+		// this stuff is for texture arrays, come back to it when you are going to implement them
+		/*
+		VkDescriptorSetLayoutBinding layoutBinding{};
+		layoutBinding.descriptorCount = 8;
+		layoutBinding.binding = 1; // binding textures to bind 1
+		layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // Again, textures only go in the fragment shader
+		layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		layoutBinding.pImmutableSamplers = 0;
+
+		VkDescriptorImageInfo texImageDescriptors[TEXTURE_ARRAY_SIZE];
+		for (int i = 0; i < TEXTURE_ARRAY_SIZE; ++i) {
+			imageDescriptors[i].sampler = nullptr;
+			imageDescriptors[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageDescriptors[i].imageView = imageView;
+		}*/
+
+	}
+
+	// go to the model class and start implementing this there!
+	std::unique_ptr<PrxTexture> PrxTexture::makeTextureFromFile(PrxDevice& device, const std::string& filepath) {
+		return std::make_unique<PrxTexture>(device, filepath);
+	}
+
+	void PrxTexture::updateDescriptor() {
+		texImageDescriptor.sampler = texSampler;
+		texImageDescriptor.imageView = texImageView;
+		texImageDescriptor.imageLayout = texImageLayout;
+	}
+
+	void PrxTexture::createTextureImage(const std::string& filepath) {
+		int texWidth;
+		int texHeight; 
+		int texChannels;
+		// note: somewhere in here is why texture coordinates are flipped
+		stbi_uc* pixels = stbi_load(filepath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+		VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+		if (!pixels) {
+			throw std::runtime_error("failed to load texture image!");
+		}
+
+		// find a way to make more mip levels later on when support is added later
+		// example would be to use this code from how you were doing it before:
+		// mipLevels = std::floor(std::log2(std::max(width, height))) + 1;
+		mipLevels = 1;
+
+		// see if you can get this to work with your PrxBuffer class
+
+		// the PrxBuffer will auto-free memory once out of scope (so, in this case, end of function)
+		//	Its not entirely optimal, as you'd likely want to free up memory just after you transfer it
+		//	but for now keep it and change if it becomes problematic
+		PrxBuffer stagingBuffer(
+			prxDevice, 4, static_cast<uint32_t>(imageSize), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
 		stagingBuffer.map();
-		stagingBuffer.writeToBuffer(data);
+		stagingBuffer.writeToBuffer(pixels);
 
-		// set image format class variable
-		//	Future goal: multiple format compatibility
-		imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+		/*VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
 
-		// setup create info struct
-		VkImageCreateInfo imageInfo{};
-		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageInfo.imageType = VK_IMAGE_TYPE_2D;
-		imageInfo.format = imageFormat;
-		imageInfo.mipLevels = mipLevels;
-		imageInfo.arrayLayers = 1;
-		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageInfo.extent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
-		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		prxDevice.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			stagingBuffer, stagingBufferMemory);
 
-		// create image on the device
-		prxDevice.createImageWithInfo(imageInfo,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			image, imageMemory);
+		void* data;
+		vkMapMemory(prxDevice.device(), stagingBufferMemory, 0, imageSize, 0, &data);
+		memcpy(data, pixels, static_cast<uint32_t>(imageSize));
+		vkUnmapMemory(prxDevice.device(), stagingBufferMemory);*/
 
-		// set image layout to be able to transfer data to the device
-		transitionImageLayout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		stbi_image_free(pixels);
 
-		// copy staging buffer data to image setup on the device
-		prxDevice.copyBufferToImage(stagingBuffer.getBuffer(),
-			image, static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1);
+		texFormat = VK_FORMAT_R8G8B8A8_SRGB;
+		texExtent = { static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight), 1 };
 
-		// set image layout to be read only by the shaders
-		//transitionImageLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		VkImageCreateInfo imageCreateInfo{};
+		imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageCreateInfo.format = texFormat;
+		imageCreateInfo.extent = texExtent;
+		imageCreateInfo.mipLevels = mipLevels;
+		imageCreateInfo.arrayLayers = layerCount;
+		imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
+		imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+			VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageCreateInfo.sharingMode;
+
+		prxDevice.createImageWithInfo(imageCreateInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			texImage, texImageMemory);
+		prxDevice.transitionImageLayout(texImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, layerCount);
+		prxDevice.copyBufferToImage(stagingBuffer.getBuffer(), texImage,
+			static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
+			layerCount);
 		
-		generateMipmaps();
+		// replace the last function call with this if you opt to go with manual memory management instead
+		//	the PrxBuffer class
+		/*prxDevice.copyBufferToImage(stagingBuffer, texImage,
+			static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
+			layerCount);*/
 
-		// store the image layout
-		imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		// copy out once mips are implemented
+		prxDevice.transitionImageLayout(texImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels, layerCount);
 
-		VkSamplerCreateInfo samplerInfo{};
-		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		samplerInfo.magFilter = VK_FILTER_NEAREST; // use the nearer pixels in the sampler so image is not blurred
-		samplerInfo.minFilter = VK_FILTER_NEAREST; 
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.mipLodBias = 0.0f;
-		samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
-		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = static_cast<float>(mipLevels);
-		samplerInfo.maxAnisotropy = 4.0;
-		samplerInfo.anisotropyEnable = VK_TRUE; // enable anistropic filtering
-		samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+		// if mip maps are generated then the final image will already be READ_ONLY_OPTIMAL
+		//generateMipmaps(); // shift this to the device class asap, you have the code base in this file
+		texImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		vkCreateSampler(prxDevice.device(), &samplerInfo, nullptr, &sampler);
+		// Uncomment if doing manual memory management instead of using PrxBuffer
+		/*vkDestroyBuffer(prxDevice.device(), stagingBuffer, nullptr);
+		vkFreeMemory(prxDevice.device(), stagingBufferMemory, nullptr);*/
+	}
 
+	void PrxTexture::createTextureImageView(VkImageViewType viewType) {
 		// image views provide metadata for an image, as Vulkan does not access images direction
-		VkImageViewCreateInfo imageViewInfo{};
-		imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		imageViewInfo.format = imageFormat;
-		imageViewInfo.components = { VK_COMPONENT_SWIZZLE_R,
+		VkImageViewCreateInfo imageViewCreateInfo{};
+		imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		imageViewCreateInfo.viewType = viewType;
+		imageViewCreateInfo.format = texFormat;
+		imageViewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R,
 			VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-		imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		imageViewInfo.subresourceRange.baseMipLevel = 0;
-		imageViewInfo.subresourceRange.baseArrayLayer = 0;
-		imageViewInfo.subresourceRange.layerCount = 1;
-		imageViewInfo.subresourceRange.levelCount = mipLevels;
-		imageViewInfo.image = image;
+		imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+		imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+		imageViewCreateInfo.subresourceRange.layerCount = 1;
+		imageViewCreateInfo.subresourceRange.levelCount = mipLevels;
+		imageViewCreateInfo.image = texImage;
 
-		vkCreateImageView(prxDevice.device(), &imageViewInfo, nullptr, &imageView);
+		if (vkCreateImageView(prxDevice.device(), &imageViewCreateInfo, nullptr, &texImageView) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create image view");
+		}
+	}
 
-		// finally, free the pixel data
-		stbi_image_free(data);
+	void PrxTexture::createTextureSampler() {
+		VkSamplerCreateInfo samplerCreateInfo{};
+		samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerCreateInfo.magFilter = VK_FILTER_NEAREST; // use the nearer pixels in the sampler so image is not blurred
+		samplerCreateInfo.minFilter = VK_FILTER_NEAREST; // experiment with this and mag filter and VK_FILTER_LINEAR
+		
+		samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		
+		// anistropy settings
+		samplerCreateInfo.anisotropyEnable = VK_TRUE; // enable anistropic filtering
+		samplerCreateInfo.maxAnisotropy = 4.0;
+		samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+		samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
 
+		// used for percentage close filtering for shadow maps
+		samplerCreateInfo.compareEnable = VK_FALSE;
+		samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
+
+		samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerCreateInfo.mipLodBias = 0.0f;
+		samplerCreateInfo.minLod = 0.0f;
+		samplerCreateInfo.maxLod = static_cast<float>(mipLevels);
+		
+		if (vkCreateSampler(prxDevice.device(), &samplerCreateInfo, nullptr, &texSampler) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create sampler!");
+		}
+
+	}
+
+	void PrxTexture::assignID() {
+		id = next_id;
+		next_id++;
 	}
 
 	PrxTexture::~PrxTexture() {
-		vkDestroyImage(prxDevice.device(), image, nullptr);
-		vkFreeMemory(prxDevice.device(), imageMemory, nullptr);
-		vkDestroyImageView(prxDevice.device(), imageView, nullptr);
-		vkDestroySampler(prxDevice.device(), sampler, nullptr);
+		vkDestroyImage(prxDevice.device(), texImage, nullptr);
+		vkFreeMemory(prxDevice.device(), texImageMemory, nullptr);
+		vkDestroyImageView(prxDevice.device(), texImageView, nullptr);
+		vkDestroySampler(prxDevice.device(), texSampler, nullptr);
 	}
 
-	void PrxTexture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout) {
-		VkCommandBuffer commandBuffer = prxDevice.beginSingleTimeCommands();
-
-		VkImageMemoryBarrier barrier{};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = oldLayout;
-		barrier.newLayout = newLayout;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = image;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = mipLevels;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-
-		VkPipelineStageFlags sourceStage;
-		VkPipelineStageFlags destinationStage;
-
-		if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED
-			&& newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		}
-		else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-			&& newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-			sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		}
-		else {
-			throw std::runtime_error("Unsupported layout transition");
-		}
-
-		vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage,
-			0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-		prxDevice.endSingleTimeCommands(commandBuffer);
-	}
-	
 	// Generate Mipmaps using blitting
 	void PrxTexture::generateMipmaps() {
 		VkFormatProperties formatProperties;
-		vkGetPhysicalDeviceFormatProperties(prxDevice.getPhysicalDevice(), imageFormat, &formatProperties);
+		vkGetPhysicalDeviceFormatProperties(prxDevice.getPhysicalDevice(), texFormat, &formatProperties);
 
 		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 			throw std::runtime_error("Texture image format does not support linear blitting!");
@@ -181,7 +295,7 @@ namespace prx {
 
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.image = image;
+		barrier.image = texImage;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -190,8 +304,8 @@ namespace prx {
 		barrier.subresourceRange.baseArrayLayer = 0;
 		barrier.subresourceRange.layerCount = 1;
 
-		int32_t mipWidth = width;
-		int32_t mipHeight = height;
+		int32_t mipWidth = texExtent.width;
+		int32_t mipHeight = texExtent.height;
 
 		// set each mip level
 		for (uint32_t i = 1; i < mipLevels; i++) {
@@ -220,7 +334,7 @@ namespace prx {
 			blit.dstSubresource.baseArrayLayer = 0;
 			blit.dstSubresource.layerCount = 1;
 
-			vkCmdBlitImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
+			vkCmdBlitImage(commandBuffer, texImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texImage,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
 
@@ -250,20 +364,95 @@ namespace prx {
 
 	}
 
-	void PrxTexture::bindTexture() {
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.sampler = getSampler();
-		imageInfo.imageView = getImageView();
-		imageInfo.imageLayout = getImageLayout();
+	void PrxTexture::transitionLayout(
+		VkCommandBuffer commandBuffer, VkImageLayout oldLayout, VkImageLayout newLayout) {
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout = oldLayout;
+		barrier.newLayout = newLayout;
 
-		std::vector<VkDescriptorSet> globalDescriptorSets(PrxSwapChain::MAX_FRAMES_IN_FLIGHT);
-		for (int i = 0; i < globalDescriptorSets.size(); i++) {
-			auto bufferInfo = PrxRenderer::uboBuffers[i]->descriptorInfo();
-			PrxDescriptorWriter(*PrxRenderer::globalSetLayout, *PrxRenderer::globalPool)
-				.writeBuffer(0, &bufferInfo)
-				.writeImage(1, &imageInfo)
-				.build(globalDescriptorSets[i]);
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+		barrier.image = texImage;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = mipLevels;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = layerCount;
+
+		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			if (texFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || texFormat == VK_FORMAT_D24_UNORM_S8_UINT) {
+				barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+		}
+		else {
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		}
 
+		VkPipelineStageFlags sourceStage;
+		VkPipelineStageFlags destinationStage;
+
+		if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (
+			oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (
+			oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+			newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+			sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		}
+		else if (
+			oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+			newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask =
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		}
+		else if (
+			oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
+			newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+			// This says that any cmd that acts in color output or after (dstStage)
+			// that needs read or write access to a resource
+			// must wait until all previous read accesses in fragment shader
+			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			barrier.dstAccessMask =
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+
+			sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		}
+		else {
+			throw std::invalid_argument("unsupported layout transition!");
+		}
+		vkCmdPipelineBarrier(
+			commandBuffer,
+			sourceStage,
+			destinationStage,
+			0,
+			0,
+			nullptr,
+			0,
+			nullptr,
+			1,
+			&barrier);
 	}
 }
