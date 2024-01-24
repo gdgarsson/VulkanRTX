@@ -150,18 +150,15 @@ namespace prx {
 		// mipLevels = std::floor(std::log2(std::max(width, height))) + 1;
 		mipLevels = 1;
 
-		// see if you can get this to work with your PrxBuffer class
-
-		// the PrxBuffer will auto-free memory once out of scope (so, in this case, end of function)
-		//	Its not entirely optimal, as you'd likely want to free up memory just after you transfer it
-		//	but for now keep it and change if it becomes problematic
 		PrxBuffer stagingBuffer(
-			prxDevice, 4, static_cast<uint32_t>(imageSize), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			prxDevice, 1, static_cast<uint32_t>(imageSize), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 		stagingBuffer.map();
 		stagingBuffer.writeToBuffer(pixels);
 
+		// the above buffer class functionally does the following,
+		//	but does not unmap until the wrapper's EOL (unless otherwise specified)
 		/*VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 
@@ -181,6 +178,7 @@ namespace prx {
 
 		VkImageCreateInfo imageCreateInfo{};
 		imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 		imageCreateInfo.format = texFormat;
 		imageCreateInfo.extent = texExtent;
 		imageCreateInfo.mipLevels = mipLevels;
@@ -190,7 +188,7 @@ namespace prx {
 		imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
 			VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-		imageCreateInfo.sharingMode;
+		imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		prxDevice.createImageWithInfo(imageCreateInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			texImage, texImageMemory);
@@ -199,12 +197,6 @@ namespace prx {
 		prxDevice.copyBufferToImage(stagingBuffer.getBuffer(), texImage,
 			static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
 			layerCount);
-		
-		// replace the last function call with this if you opt to go with manual memory management instead
-		//	the PrxBuffer class
-		/*prxDevice.copyBufferToImage(stagingBuffer, texImage,
-			static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
-			layerCount);*/
 
 		// copy out once mips are implemented
 		prxDevice.transitionImageLayout(texImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,

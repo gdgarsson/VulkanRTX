@@ -15,7 +15,7 @@
 namespace prx {
 
 	// Multiple options for rendering point lights:
-	//	1. render into global UBO information, requiring only a single draw call (will eventually implement)
+	//	1. render into global UBO information, requiring only a single draw call (may eventually implement)
 	//		Pros: Only 1 draw call, likely more efficient
 	//		Cons: not as easy to add information per light
 	//	2. Use push constants for each light with multiple render calls (the one used here)

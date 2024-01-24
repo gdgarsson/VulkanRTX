@@ -73,26 +73,6 @@ namespace prx {
 		return std::make_unique<PrxModel>(device, builder);
 	}
 
-	void PrxModel::createTexture(const std::string& texFP) {
-		tex = std::make_unique<PrxTexture>(prxDevice, texFP);
-		setupModelTexture();
-	}
-
-	void PrxModel::setupModelTexture() {
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.sampler = tex.get()->getSampler();
-		imageInfo.imageView = tex.get()->getImageView();
-		imageInfo.imageLayout = tex.get()->getImageLayout();
-
-		auto imageSetLayout = PrxDescriptorSetLayout::Builder(prxDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT) // textures should only go to the fragment shader
-			.build();
-
-		PrxDescriptorWriter(*imageSetLayout, *texDescriptorPool)
-			.writeImage(0, &imageInfo)
-			.build(texMatsDescriptorSets[0]);
-	}
-
 	void PrxModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
 		vertexCount = static_cast<uint32_t>(vertices.size());
 
@@ -163,6 +143,8 @@ namespace prx {
 	}
 
 	void PrxModel::draw(VkCommandBuffer commandBuffer) {
+
+
 		if (hasIndexBuffer) {
 			vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
 		}
@@ -182,35 +164,6 @@ namespace prx {
 		}
 
 	}
-
-	/*void PrxModel::drawAssimp(VkCommandBuffer commandBuffer) {
-		
-		for (int i = 0; i < meshes.size(); i++) {
-			int materialIndex = meshes[i].matIntex;
-
-			assert(materialIndex < textures.size());
-
-			if (textures.size() > 0) {
-				if (textures[materialIndex]) {
-					textures[materialIndex]->bindTexture();
-				}
-			}
-			else {
-				PrxRenderer::defaultTexture->bindTexture();
-			}
-			
-			// there has to be a way to draw multiple meshes (one at a time) with only 1
-			//	vertex and index buffer...
-			bind(commandBuffer, meshes[i].baseVertex);
-			
-			if (hasIndexBuffer) {
-				vkCmdDrawIndexed(commandBuffer, meshes[i].numIndices, 1, meshes[i].baseIndex, 0, 0);
-			}
-			else { // failsafe: draw the whole dang thing lol
-				vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
-			}
-		}
-	}*/
 
 
 	// Note: you could just return a vector containing a single struct with the 3
@@ -354,7 +307,7 @@ namespace prx {
 
 	bool PrxModel::ModelData::initFromScene(const aiScene* pScene, const std::string& filepath) {
 		meshes.resize(pScene->mNumMeshes);
-		textures.resize(pScene->mNumTextures);
+		textureFilePaths.resize(pScene->mNumTextures);
 		
 		int numVerts = 0;
 		int numIndices = 0;
@@ -409,6 +362,7 @@ namespace prx {
 			const aiVector3D& pPos = paiMesh->mVertices[i];
 			const aiVector3D& pNormal = paiMesh->mNormals[i];
 			const aiVector3D& pUV = paiMesh->HasTextureCoords(0) ? paiMesh->mTextureCoords[0][i] : zero3D;
+			std::cout << pUV.x << ", " << pUV.y << ", " << pUV.z << std::endl;
 
 			Vertex v{ glm::vec3(pPos.x, pPos.y, pPos.z),
 				glm::vec3(zero3D.x, zero3D.y, zero3D.z),
@@ -447,7 +401,7 @@ namespace prx {
 		for (int i = 0; i < pScene->mNumMaterials; i++) {
 			const aiMaterial* pMaterial = pScene->mMaterials[i];
 
-			if(textures.size() > 0) textures[i] = nullptr;
+			if (textureFilePaths.size() > 0) textureFilePaths[i] = "";
 			
 			if (pMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 				aiString path;
@@ -462,9 +416,8 @@ namespace prx {
 
 					std::string fullpath = dir + "/" + p;
 
-					// TODO: in the future, have a way to handle failure of loading textures
-					//	without throwing a runtime error
-					textures[i] = new PrxTexture(prxDevice, fullpath);
+					// TODO: in the future, have textures added to a pool, and store the index on the model
+					//PrxTexture::makeTextureFromFile(prxDevice, fullpath);
 				}
 			}
 		}

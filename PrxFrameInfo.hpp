@@ -11,7 +11,7 @@ namespace prx {
 #define MAX_LIGHTS 10
 
 	// Note: there IS a way to get virtually unlimited point lights!
-	//	Come back eventually to try and figure that one out!
+	//	Stretch goal: Come back eventually to try and figure that one out!
 	struct PointLight {
 		glm::vec4 position{}; // ignore w
 		glm::vec4 color{}; // w is intensity
@@ -32,6 +32,7 @@ namespace prx {
 		VkCommandBuffer commandBuffer;
 		PrxCamera& camera;
 		VkDescriptorSet globalDescriptorSet;
+		PrxDescriptorPool& frameDescriptorPool; // pool of descriptors that is cleared each frame
 		PrxGameObject::Map& gameObjects;
 	};
 }

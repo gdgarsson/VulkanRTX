@@ -76,7 +76,6 @@ namespace prx {
 		auto &bindingDescriptions = configInfo.bindingDescriptions;
 		auto &attributeDescriptions = configInfo.attributeDescriptions;
 
-
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());

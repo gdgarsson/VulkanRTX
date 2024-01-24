@@ -125,11 +125,13 @@ namespace prx {
             
 			if (auto commandBuffer = prxRenderer.beginFrame()) {
                 int frameIndex = prxRenderer.getFrameIndex();
+                framePools[frameIndex]->resetPool();
                 FrameInfo frameInfo{ frameIndex,
                     frameTime,
                     commandBuffer,
                     camera,
                     globalDescriptorSets[frameIndex],
+                    *framePools[frameIndex],
                     gameObjectManager.gameObjects};
                 
                 // update objects
@@ -140,6 +142,12 @@ namespace prx {
                 pointLightSystem.update(frameInfo, ubo);
                 uboBuffers[frameIndex]->writeToBuffer(&ubo);
                 uboBuffers[frameIndex]->flush();
+
+                // this FINAL step is important - you MUST update
+                //  each game object's buffer data with its transform.
+                //  The renderer should not be updating that, it should be seperate
+                //  and updates take place BEFORE each draw call.
+                gameObjectManager.updateBuffer(frameIndex);
 
                 // render
 				prxRenderer.beginSwapChainRenderPass(commandBuffer);
@@ -160,18 +168,18 @@ namespace prx {
 
 	// load models used in the program
 	void PrxApp::loadGameObjects() {
-        /*std::shared_ptr<PrxModel> carModel = PrxModel::createModelFromFileOld(prxDevice, "models/Cadillac/Cadillac_CT4_V_2022.obj");
-        auto car = gameObjectManager.createGameObject();
-        car.model = carModel;
-        car.transform.scale = { 0.5f, 0.5f, 0.5f };
-        gameObjects.emplace(car.getId(), std::move(car));*/
+        std::shared_ptr<PrxTexture> marbleTexture =
+            PrxTexture::makeTextureFromFile(prxDevice, "textures/missing.png");
+        std::shared_ptr<PrxTexture> libertyTexture =
+            PrxTexture::makeTextureFromFile(prxDevice, "textures/texture.jpg");
 
-        std::shared_ptr<PrxModel> flatVaseModel = PrxModel::createModelFromFileOld(prxDevice, "models/flat_vase.obj");
+       std::shared_ptr<PrxModel> flatVaseModel = PrxModel::createModelFromFileOld(prxDevice, "models/flat_vase.obj");
 
         auto& flatVase = gameObjectManager.createGameObject();
         flatVase.model = flatVaseModel;
         flatVase.transform.translation = { .5f, .5f, 0.f };
         flatVase.transform.scale = { 3.f, 1.5f, 3.f };
+        flatVase.diffuseMap = libertyTexture;
 
         std::shared_ptr<PrxModel> smoothVaseModel = PrxModel::createModelFromFileOld(prxDevice, "models/smooth_vase.obj");
 
@@ -179,17 +187,16 @@ namespace prx {
         smoothVase.model = smoothVaseModel;
         smoothVase.transform.translation = { -.5f, .5f, 0.f };
         smoothVase.transform.scale = { 3.f, 1.5f, 3.f };
+        smoothVase.diffuseMap = libertyTexture;
 
         //std::shared_ptr<PrxModel> quad = PrxModel::createModelFromFile(prxDevice, "models/quad.obj");
         std::shared_ptr<PrxModel> quad = PrxModel::createModelFromFileOld(prxDevice, "models/quad.obj");
-        quad->usesAssimp = true;
-        std::shared_ptr<PrxTexture> marbleTexture =
-            PrxTexture::makeTextureFromFile(prxDevice, "../textures/missing.png");
-
+        
         auto& floor = gameObjectManager.createGameObject();
         floor.model = quad;
         floor.transform.translation = { 0.f, .5f, 0.f }; // move the floor down a tad
         floor.transform.scale = { 3.f, 1.f, 3.f }; // scale by 3x, 1y, 3z
+        floor.diffuseMap = marbleTexture;
         
         std::vector<glm::vec3> lightColors{
             {1.f, .1f, .1f},

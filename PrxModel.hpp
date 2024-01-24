@@ -93,7 +93,7 @@ namespace prx {
 			std::vector<uint32_t> indices;
 
 			std::vector<MeshEntryData> meshes;
-			std::vector<PrxTexture*> textures;
+			std::vector<std::string> textureFilePaths;
 
 			PrxDevice& prxDevice;
 
@@ -136,9 +136,6 @@ namespace prx {
 
 		void createVertexBuffers(const std::vector<Vertex>& vertices);
 		void createIndexBuffer(const std::vector<uint32_t>& indices);
-		
-		void createTexture(const std::string& texFP);
-		void setupModelTexture();
 
 		void freeBuffers();
 
@@ -151,11 +148,8 @@ namespace prx {
 		uint32_t indexCount;
 
 		std::vector<MeshEntryData> meshes;
-		std::vector<PrxTexture*> textures;
-
 		std::vector<std::unique_ptr<PrxMaterial>> materials;
-		std::string texFilePath;
-		std::unique_ptr<PrxTexture> tex;
+		std::vector<std::string> texFilePaths;
 
 		bool hasIndexBuffer = false;
 

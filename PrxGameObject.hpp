@@ -36,6 +36,10 @@ namespace prx {
 		glm::mat4 normalMatrix{1.f};
 	};
 
+	struct RenderSettings {
+		bool generatesShadows = true;
+	};
+
 	class PrxGameObjectManager; // forward declaration for proper compatibility with PrxGameObject
 
 	class PrxGameObject

@@ -157,7 +157,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="FbxBuilder.cpp" />
     <ClCompile Include="HelloTriangleApplication.cpp" />
     <ClCompile Include="KeyboardMovementController.cpp" />
     <ClCompile Include="main.cpp" />
@@ -180,7 +179,6 @@
     <ClCompile Include="systems\SimpleRenderSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FbxBuilder.h" />
     <ClInclude Include="KeyboardMovementController.hpp" />
     <ClInclude Include="PrxBuffer.hpp" />
     <ClInclude Include="PrxCamera.hpp" />

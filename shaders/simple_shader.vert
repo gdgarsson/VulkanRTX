@@ -25,18 +25,23 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
 	int numLights;
 } ubo;
 
+layout(set = 1, binding = 0) uniform GameObjectBufferInfo {
+	mat4 modelMatrix;
+	mat4 normalMatrix;
+} gameObject;
+
 layout(push_constant) uniform Push {
 	mat4 modelMatrix;
 	mat4 normalMatrix; // mat4 for alignment reasons, truncate into mat3 when used
 } push;
 
 void main() {
-	vec4 positionWorld = push.modelMatrix * vec4(position, 1.0);
+	vec4 positionWorld = gameObject.modelMatrix * vec4(position, 1.0);
 
     gl_Position = ubo.projection * (ubo.view * positionWorld);
 	
 	// normal matrix is truncated back into a mat3
-	fragNormalWorld = normalize(mat3(push.normalMatrix) * normal);
+	fragNormalWorld = normalize(mat3(gameObject.normalMatrix) * normal);
 	fragPosWorld = positionWorld.xyz;
 	fragColor = color;
 	fragUV = uv;

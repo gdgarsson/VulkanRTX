@@ -35,7 +35,7 @@ namespace prx {
 		std::unique_ptr<PrxPipeline> prxPipeline;
 		VkPipelineLayout pipelineLayout;
 
-
+		std::unique_ptr<PrxDescriptorSetLayout> renderSystemLayout;
 	};
 }
 
