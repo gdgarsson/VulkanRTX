@@ -167,6 +167,7 @@
     <ClCompile Include="PrxMaterial.cpp" />
     <ClCompile Include="PrxModel.cpp" />
     <ClCompile Include="PrxRenderer.cpp" />
+    <ClCompile Include="PrxRenderGraph.cpp" />
     <ClCompile Include="PrxSwapChain.cpp" />
     <ClCompile Include="PrxDevice.cpp" />
     <ClCompile Include="PrxApp.cpp" />
@@ -188,6 +189,7 @@
     <ClInclude Include="PrxMaterial.hpp" />
     <ClInclude Include="PrxModel.hpp" />
     <ClInclude Include="PrxRenderer.hpp" />
+    <ClInclude Include="PrxRenderGraph.h" />
     <ClInclude Include="PrxSwapChain.hpp" />
     <ClInclude Include="PrxDevice.hpp" />
     <ClInclude Include="PrxApp.hpp" />

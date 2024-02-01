@@ -173,7 +173,7 @@ namespace prx {
         std::shared_ptr<PrxTexture> libertyTexture =
             PrxTexture::makeTextureFromFile(prxDevice, "textures/texture.jpg");
 
-       std::shared_ptr<PrxModel> flatVaseModel = PrxModel::createModelFromFileOld(prxDevice, "models/flat_vase.obj");
+       std::shared_ptr<PrxModel> flatVaseModel = PrxModel::createModelFromFile(prxDevice, "models/flat_vase.obj");
 
         auto& flatVase = gameObjectManager.createGameObject();
         flatVase.model = flatVaseModel;
@@ -181,7 +181,7 @@ namespace prx {
         flatVase.transform.scale = { 3.f, 1.5f, 3.f };
         flatVase.diffuseMap = libertyTexture;
 
-        std::shared_ptr<PrxModel> smoothVaseModel = PrxModel::createModelFromFileOld(prxDevice, "models/smooth_vase.obj");
+        std::shared_ptr<PrxModel> smoothVaseModel = PrxModel::createModelFromFile(prxDevice, "models/smooth_vase.obj");
 
         auto& smoothVase = gameObjectManager.createGameObject();
         smoothVase.model = smoothVaseModel;
@@ -190,7 +190,7 @@ namespace prx {
         smoothVase.diffuseMap = libertyTexture;
 
         //std::shared_ptr<PrxModel> quad = PrxModel::createModelFromFile(prxDevice, "models/quad.obj");
-        std::shared_ptr<PrxModel> quad = PrxModel::createModelFromFileOld(prxDevice, "models/quad.obj");
+        std::shared_ptr<PrxModel> quad = PrxModel::createModelFromFile(prxDevice, "models/quad.obj");
         
         auto& floor = gameObjectManager.createGameObject();
         floor.model = quad;

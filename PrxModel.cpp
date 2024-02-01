@@ -355,21 +355,21 @@ namespace prx {
 
 	void PrxModel::ModelData::initSingleMesh(const aiMesh* paiMesh) {
 		const aiVector3D zero3D(0.0f, 0.0f, 0.0f);
-
-		std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+		const aiColor4D white(1.0f, 1.0f, 1.0f, 1.0f);
 
 		for (int i = 0; i < paiMesh->mNumVertices; i++) {
 			const aiVector3D& pPos = paiMesh->mVertices[i];
 			const aiVector3D& pNormal = paiMesh->mNormals[i];
 			const aiVector3D& pUV = paiMesh->HasTextureCoords(0) ? paiMesh->mTextureCoords[0][i] : zero3D;
-			std::cout << pUV.x << ", " << pUV.y << ", " << pUV.z << std::endl;
-
+			const aiColor4D& pColor = paiMesh->HasVertexColors(0) ? paiMesh->mColors[0][i] : white;
+			
 			Vertex v{ glm::vec3(pPos.x, pPos.y, pPos.z),
-				glm::vec3(zero3D.x, zero3D.y, zero3D.z),
+				glm::vec3(pColor.r, pColor.g, pColor.b),
 				glm::vec3(pNormal.x, pNormal.y, pNormal.z),
 				glm::vec2(pUV.x, pUV.y) };
 
 			vertices[i] = v;
+			
 		}
 
 		for (int i = 0; i < paiMesh->mNumFaces; i++) {
@@ -400,6 +400,7 @@ namespace prx {
 
 		for (int i = 0; i < pScene->mNumMaterials; i++) {
 			const aiMaterial* pMaterial = pScene->mMaterials[i];
+			
 
 			if (textureFilePaths.size() > 0) textureFilePaths[i] = "";
 			
